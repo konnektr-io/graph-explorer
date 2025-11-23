@@ -1,0 +1,41 @@
+# syntax=docker/dockerfile:1
+
+# --- Build stage ---
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Copy package files and install dependencies
+COPY frontend/package.json frontend/pnpm-lock.yaml ./frontend/
+WORKDIR /app/frontend
+RUN pnpm install --frozen-lockfile
+
+# Copy source code
+COPY frontend .
+
+# Build with Vite, passing build args for env vars
+ARG VITE_AUTH0_DOMAIN
+ARG VITE_AUTH0_CLIENT_ID
+ARG VITE_AUTH0_AUDIENCE
+ENV VITE_AUTH0_DOMAIN=$VITE_AUTH0_DOMAIN
+ENV VITE_AUTH0_CLIENT_ID=$VITE_AUTH0_CLIENT_ID
+ENV VITE_AUTH0_AUDIENCE=$VITE_AUTH0_AUDIENCE
+RUN pnpm build
+
+# --- Runtime stage ---
+FROM nginx:1.25-alpine AS runtime
+WORKDIR /usr/share/nginx/html
+
+# Remove default nginx static files
+RUN rm -rf ./*
+
+# Copy built frontend
+COPY --from=builder /app/frontend/dist .
+
+# Copy custom nginx config if needed
+# COPY nginx.conf /etc/nginx/nginx.conf
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
