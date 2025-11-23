@@ -1,5 +1,4 @@
 import { DigitalTwinsClient } from "@azure/digital-twins-core";
-import type { TokenCredential } from "@azure/core-auth";
 import type {
   PipelinePolicy,
   PipelineRequest,
@@ -91,31 +90,4 @@ export const digitalTwinsClientFactory = async (
     );
   }
   return digitalTwinsClients[cacheKey];
-};
-
-/**
- * Legacy factory function for backward compatibility
- * @deprecated Use digitalTwinsClientFactory(connection) instead
- */
-export const digitalTwinsClientFactoryLegacy = (
-  adtHost: string,
-  tokenCredential: TokenCredential
-): DigitalTwinsClient => {
-  if (!digitalTwinsClients[adtHost]) {
-    const _pathRegex = /(\/){2,}/g;
-    const _pathRewrite = (path: string) =>
-      `${getTwinsProxyPath()}${path}`.replace(_pathRegex, "/");
-
-    const customPolicy = createCustomProxyPolicy(adtHost, _pathRewrite);
-
-    digitalTwinsClients[adtHost] = new DigitalTwinsClient(
-      `https://${adtHost}/`,
-      tokenCredential,
-      {
-        allowInsecureConnection: window.location.hostname === "localhost",
-        additionalPolicies: [{ policy: customPolicy, position: "perCall" }],
-      }
-    );
-  }
-  return digitalTwinsClients[adtHost];
 };
