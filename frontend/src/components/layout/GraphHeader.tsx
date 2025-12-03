@@ -110,9 +110,7 @@ export function GraphHeader() {
           {/* Logo and Title - Main Brand */}
           <div className="flex items-center gap-2">
             <img src={konnektrLogo} alt="Konnektr logo" className="h-7 w-7" />
-            <span className="font-semibold text-foreground">
-              Konnektr Graph
-            </span>
+            <span className="font-semibold text-foreground">Graph</span>
           </div>
 
           {/* Connection Selector */}

@@ -22,10 +22,27 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Trash2, MoreVertical } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function ConnectionSelector(): React.ReactElement {
   const ktrlPlaneConnections = useConnectionStore(
@@ -39,8 +56,12 @@ export function ConnectionSelector(): React.ReactElement {
     (state) => state.setCurrentConnection
   );
   const addConnection = useConnectionStore((state) => state.addConnection);
+  const removeConnection = useConnectionStore(
+    (state) => state.removeConnection
+  );
 
   const [open, setOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [form, setForm] = useState({
     name: "",
     adtHost: "",
@@ -113,8 +134,28 @@ export function ConnectionSelector(): React.ReactElement {
     setOpen(false);
   };
 
+  const currentConnection =
+    localConnections.find((c) => c.id === currentConnectionId) ||
+    ktrlPlaneConnections.find((c) => c.id === currentConnectionId);
+
+  const canDeleteCurrent =
+    currentConnection &&
+    !currentConnection.isKtrlPlaneManaged &&
+    currentConnection.id !== "localhost";
+
+  const handleDeleteClick = () => {
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (currentConnection && canDeleteCurrent) {
+      removeConnection(currentConnection.id);
+      setDeleteDialogOpen(false);
+    }
+  };
+
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1">
       <Select
         value={currentConnectionId || ""}
         onValueChange={setCurrentConnection}
@@ -156,9 +197,29 @@ export function ConnectionSelector(): React.ReactElement {
           </SelectGroup>
         </SelectContent>
       </Select>
+
+      {canDeleteCurrent && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={handleDeleteClick}
+              className="text-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Remove Connection
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button variant="outline" size="sm" className="ml-1">
+          <Button variant="outline" size="sm">
             Add
           </Button>
         </DialogTrigger>
@@ -357,6 +418,27 @@ export function ConnectionSelector(): React.ReactElement {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Connection</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove the connection "
+              {currentConnection?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

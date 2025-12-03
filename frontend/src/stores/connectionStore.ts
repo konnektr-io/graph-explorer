@@ -66,15 +66,18 @@ interface ConnectionState {
   getAllConnections: () => Connection[]; // Returns merged connections
 }
 
-const defaultConnections: Connection[] = [
-  {
-    id: "localhost",
-    name: "Local Development",
-    adtHost: "localhost:5000",
-    description: "Local development instance",
-    authProvider: "none",
-  },
-];
+const defaultConnections: Connection[] =
+  import.meta.env.MODE === "development"
+    ? [
+        {
+          id: "localhost",
+          name: "Local Development",
+          adtHost: "localhost:5000",
+          description: "Local development instance",
+          authProvider: "none",
+        },
+      ]
+    : [];
 
 export const useConnectionStore = create<ConnectionState>()(
   persist(
