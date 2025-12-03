@@ -1,10 +1,10 @@
+import { useEffect } from "react";
 import {
   Settings,
   LogOut,
   Menu,
   PanelRightOpen,
   PanelLeftOpen,
-  Database,
   LogIn,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,8 +22,8 @@ import { ModeToggle } from "../mode-toggle";
 import { ConnectionSelector } from "@/components/ConnectionSelector";
 import { ConnectionStatus } from "@/components/ConnectionStatus";
 import { useAuth0 } from "@auth0/auth0-react";
-import { useEffect } from "react";
 import { fetchGraphResources } from "@/services/ktrlplaneClient";
+import konnektrLogo from "../assets/konnektr.svg";
 
 export function GraphHeader() {
   const {
@@ -106,8 +106,8 @@ export function GraphHeader() {
 
           {/* Logo and Title - Main Brand */}
           <div className="flex items-center gap-2">
-            <Database className="w-5 h-5 text-secondary" />
-            <span className="font-semibold text-foreground text-lg">
+            <img src={konnektrLogo} alt="Konnektr logo" className="h-7 w-7" />
+            <span className="font-semibold text-foreground">
               Konnektr Graph
             </span>
           </div>
