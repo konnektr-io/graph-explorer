@@ -110,7 +110,12 @@ export const useConnectionStore = create<ConnectionState>()(
       },
 
       setCurrentConnection: async (id) => {
-        const conn = get().connections.find((c) => c.id === id);
+        const state = get();
+        const allConnections = [
+          ...state.ktrlPlaneConnections,
+          ...state.connections,
+        ];
+        const conn = allConnections.find((c) => c.id === id);
         if (conn) {
           set({ currentConnectionId: id, isConnected: true });
 
@@ -135,9 +140,12 @@ export const useConnectionStore = create<ConnectionState>()(
 
       getCurrentConnection: () => {
         const state = get();
+        const allConnections = [
+          ...state.ktrlPlaneConnections,
+          ...state.connections,
+        ];
         return (
-          state.connections.find((c) => c.id === state.currentConnectionId) ||
-          null
+          allConnections.find((c) => c.id === state.currentConnectionId) || null
         );
       },
 
@@ -146,7 +154,12 @@ export const useConnectionStore = create<ConnectionState>()(
       },
 
       testConnection: async (id) => {
-        const conn = get().connections.find((c) => c.id === id);
+        const state = get();
+        const allConnections = [
+          ...state.ktrlPlaneConnections,
+          ...state.connections,
+        ];
+        const conn = allConnections.find((c) => c.id === id);
         if (!conn) {
           console.error(`Connection ${id} not found`);
           return false;
@@ -184,17 +197,23 @@ export const useConnectionStore = create<ConnectionState>()(
       },
 
       setKtrlPlaneConnections: (resources) => {
-        const connections = resources.map((resource) => ({
-          id: `ktrlplane-${resource.id}`,
-          name: `${resource.name} (KtrlPlane)`,
-          adtHost: resource.endpoint || "",
-          description: `Managed Graph instance in project ${resource.project_id}`,
-          authProvider: "ktrlplane" as AuthProvider,
-          isKtrlPlaneManaged: true,
-          ktrlPlaneResourceId: resource.id,
-          ktrlPlaneProjectId: resource.project_id,
-        }));
+        // Filter out resources without valid endpoints
+        const connections = resources
+          .filter(
+            (resource) => resource.endpoint && resource.endpoint.trim() !== ""
+          )
+          .map((resource) => ({
+            id: `ktrlplane-${resource.id}`,
+            name: `${resource.name}`,
+            adtHost: resource.endpoint!,
+            description: `Managed by KtrlPlane (${resource.sku})`,
+            authProvider: "ktrlplane" as AuthProvider,
+            isKtrlPlaneManaged: true,
+            ktrlPlaneResourceId: resource.id,
+            ktrlPlaneProjectId: resource.project_id,
+          }));
         set({ ktrlPlaneConnections: connections });
+        console.log(`Configured ${connections.length} KtrlPlane connections`);
       },
 
       getAllConnections: () => {
@@ -205,38 +224,18 @@ export const useConnectionStore = create<ConnectionState>()(
     }),
     {
       name: "konnektr-connections",
-      // Don't persist ktrlPlaneConnections
+      // Don't persist ktrlPlaneConnections - only persist local connections
       partialize: (state) => ({
         connections: state.connections,
         currentConnectionId: state.currentConnectionId,
-        dismissedBanners: state.dismissedBanners,
+        dismissedBanners: Array.from(state.dismissedBanners), // Convert Set to Array
       }),
-      // Custom storage to handle Set serialization
-      storage: {
-        getItem: (name) => {
-          const str = localStorage.getItem(name);
-          if (!str) return null;
-          const parsed = JSON.parse(str);
-          // Convert dismissedBanners array back to Set
-          if (parsed.state?.dismissedBanners) {
-            parsed.state.dismissedBanners = new Set(
-              parsed.state.dismissedBanners
-            );
-          }
-          return parsed;
-        },
-        setItem: (name, value) => {
-          const parsed = JSON.parse(value);
-          // Convert dismissedBanners Set to array for storage
-          if (parsed.state?.dismissedBanners) {
-            parsed.state.dismissedBanners = Array.from(
-              parsed.state.dismissedBanners
-            );
-          }
-          localStorage.setItem(name, JSON.stringify(parsed));
-        },
-        removeItem: (name) => localStorage.removeItem(name),
-      },
+      // Merge function to restore Set from Array
+      merge: (persistedState: any, currentState: ConnectionState) => ({
+        ...currentState,
+        ...persistedState,
+        dismissedBanners: new Set(persistedState.dismissedBanners || []),
+      }),
     }
   )
 );
