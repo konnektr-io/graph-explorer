@@ -234,7 +234,9 @@ export class KtrlPlaneGraphTokenCredential implements TokenCredential {
     try {
       const token = await this.getAccessTokenSilently({
         authorizationParams: {
-          audience: "https://graph.konnektr.io",
+          audience:
+            import.meta.env.VITE_AUTH0_GRAPH_AUDIENCE ||
+            "https://graph.konnektr.io",
         },
       });
 

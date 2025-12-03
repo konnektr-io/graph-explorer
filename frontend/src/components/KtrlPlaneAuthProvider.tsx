@@ -12,12 +12,11 @@ interface KtrlPlaneAuthProviderProps {
 export function KtrlPlaneAuthProvider({
   children,
 }: KtrlPlaneAuthProviderProps): React.ReactElement {
-  const domain =
-    import.meta.env.VITE_KTRLPLANE_AUTH0_DOMAIN || "auth.konnektr.io";
-  const clientId =
-    import.meta.env.VITE_KTRLPLANE_AUTH0_CLIENT_ID ||
-    import.meta.env.VITE_AUTH0_CLIENT_ID;
-  const audience = "https://api.ktrlplane.konnektr.io";
+  const domain = import.meta.env.VITE_AUTH0_DOMAIN || "auth.konnektr.io";
+  const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
+  const audience =
+    import.meta.env.VITE_AUTH0_KTRLPLANE_AUDIENCE ||
+    "https://ktrlplane.konnektr.io";
   const redirectUri = window.location.origin;
 
   if (!domain || !clientId) {

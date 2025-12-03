@@ -53,7 +53,9 @@ export function GraphHeader() {
         try {
           const token = await getAccessTokenSilently({
             authorizationParams: {
-              audience: "https://api.ktrlplane.konnektr.io",
+              audience:
+                import.meta.env.VITE_AUTH0_KTRLPLANE_AUDIENCE ||
+                "https://ktrlplane.konnektr.io",
             },
           });
           const resources = await fetchGraphResources(token);

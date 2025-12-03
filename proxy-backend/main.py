@@ -11,7 +11,8 @@ logging.basicConfig(level=logging.INFO)
 PROXY_PREFIX = "/api/proxy"
 KTRLPLANE_PROXY_PREFIX = "/api/ktrlplane"
 KTRLPLANE_BASE_URL = os.getenv(
-    "KTRLPLANE_BASE_URL", "https://api.ktrlplane.konnektr.io"
+    "KTRLPLANE_BASE_URL",
+    "http://ktrlplane-backend-service.ktrlplane.svc.cluster.local/api/v1",
 )
 
 
