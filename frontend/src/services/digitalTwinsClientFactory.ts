@@ -6,7 +6,10 @@ import type {
   SendRequest,
 } from "@azure/core-rest-pipeline";
 import type { Connection } from "@/stores/connectionStore";
-import { getTokenCredential } from "@/services/auth";
+import {
+  getTokenCredential,
+  KtrlPlaneGraphTokenCredential,
+} from "@/services/auth";
 
 /**
  * Pipeline policy that rewrites URLs and adds custom headers
@@ -53,12 +56,16 @@ const getTwinsProxyPath = (): string => {
  * Digital Twins client factory that returns cached Digital Twins Client
  *
  * @param connection - Connection with auth provider and config
+ * @param getAccessTokenSilently - Optional Auth0 token getter for KtrlPlane connections
  * @returns Promise that resolves to DigitalTwinsClient
  *
  * Note: This function is async because it needs to initialize MSAL if using MSAL auth
  */
 export const digitalTwinsClientFactory = async (
-  connection: Connection
+  connection: Connection,
+  getAccessTokenSilently?: (options?: {
+    authorizationParams?: { audience?: string };
+  }) => Promise<string>
 ): Promise<DigitalTwinsClient> => {
   const { adtHost } = connection;
 
@@ -66,8 +73,22 @@ export const digitalTwinsClientFactory = async (
   const cacheKey = `${adtHost}:${connection.id}`;
 
   if (!digitalTwinsClients[cacheKey]) {
-    // Get token credential based on auth provider
-    const tokenCredential = await getTokenCredential(connection);
+    let tokenCredential;
+
+    // Handle KtrlPlane-managed connections
+    if (connection.authProvider === "ktrlplane") {
+      if (!getAccessTokenSilently) {
+        throw new Error(
+          "KtrlPlane connections require Auth0 context. Please sign in."
+        );
+      }
+      tokenCredential = new KtrlPlaneGraphTokenCredential(
+        getAccessTokenSilently
+      );
+    } else {
+      // Get token credential based on auth provider
+      tokenCredential = await getTokenCredential(connection);
+    }
 
     if (!tokenCredential) {
       throw new Error("No authentication configured for this connection");

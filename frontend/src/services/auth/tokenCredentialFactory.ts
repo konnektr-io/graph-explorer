@@ -211,13 +211,52 @@ export function useAuth0Credential(
 }
 
 /**
+ * KtrlPlane Token Credential for Graph resources managed by KtrlPlane
+ * Uses Auth0 with Graph-specific audience
+ */
+export class KtrlPlaneGraphTokenCredential implements TokenCredential {
+  private getAccessTokenSilently: (options?: {
+    authorizationParams?: { audience?: string };
+  }) => Promise<string>;
+
+  constructor(
+    getAccessTokenSilently: (options?: {
+      authorizationParams?: { audience?: string };
+    }) => Promise<string>
+  ) {
+    this.getAccessTokenSilently = getAccessTokenSilently;
+  }
+
+  /**
+   * Get access token for Graph API (with graph audience)
+   */
+  async getToken(): Promise<{ token: string; expiresOnTimestamp: number }> {
+    try {
+      const token = await this.getAccessTokenSilently({
+        authorizationParams: {
+          audience: "https://graph.konnektr.io",
+        },
+      });
+
+      return {
+        token,
+        expiresOnTimestamp: Date.now() + 3600000,
+      };
+    } catch (error) {
+      console.error("Failed to get KtrlPlane Graph token:", error);
+      throw new Error("Authentication required. Please sign in to KtrlPlane.");
+    }
+  }
+}
+
+/**
  * Factory function to create appropriate token credential based on connection config
  *
  * @param connection - Connection with auth provider and config
  * @returns TokenCredential instance
  *
  * Note: For Auth0, you must use useAuth0Credential() hook instead, as it requires
- * Auth0Provider context. This factory only supports MSAL.
+ * Auth0Provider context. This factory only supports MSAL and KtrlPlane.
  */
 export async function getTokenCredential(
   connection: Connection
@@ -235,6 +274,14 @@ export async function getTokenCredential(
     const credential = new MsalTokenCredential(authConfig);
     await credential.initialize();
     return credential;
+  }
+
+  if (authProvider === "ktrlplane") {
+    // For KtrlPlane-managed connections, the credential will be provided by
+    // the digitalTwinsClientFactory with Auth0 context
+    throw new Error(
+      "KtrlPlane credentials must be created with Auth0 context"
+    );
   }
 
   if (authProvider === "auth0") {

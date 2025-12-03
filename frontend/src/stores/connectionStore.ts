@@ -1,11 +1,12 @@
 // @ts-nocheck - Zustand type inference issues with strict mode
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import type { KtrlPlaneResource } from "@/services/ktrlplaneClient";
 
 /**
  * Authentication provider types supported by Graph Explorer
  */
-export type AuthProvider = "msal" | "auth0" | "none";
+export type AuthProvider = "msal" | "auth0" | "none" | "ktrlplane";
 
 /**
  * Authentication configuration for a connection
@@ -37,10 +38,16 @@ export interface Connection {
   // Authentication
   authProvider: AuthProvider;
   authConfig?: AuthConfig;
+
+  // KtrlPlane metadata (for connections from KtrlPlane)
+  isKtrlPlaneManaged?: boolean;
+  ktrlPlaneResourceId?: string;
+  ktrlPlaneProjectId?: string;
 }
 
 interface ConnectionState {
   connections: Connection[];
+  ktrlPlaneConnections: Connection[]; // Connections from KtrlPlane (not persisted)
   currentConnectionId: string | null;
   isConnected: boolean;
   dismissedBanners: Set<string>; // Track dismissed connection banners by connection ID
@@ -55,6 +62,8 @@ interface ConnectionState {
   testConnection: (id: string) => Promise<boolean>;
   dismissBanner: (connectionId: string) => void;
   isBannerDismissed: (connectionId: string) => boolean;
+  setKtrlPlaneConnections: (resources: KtrlPlaneResource[]) => void;
+  getAllConnections: () => Connection[]; // Returns merged connections
 }
 
 const defaultConnections: Connection[] = [
@@ -71,6 +80,7 @@ export const useConnectionStore = create<ConnectionState>()(
   persist(
     (set, get) => ({
       connections: defaultConnections,
+      ktrlPlaneConnections: [],
       currentConnectionId: defaultConnections[0].id,
       isConnected: false,
       dismissedBanners: new Set<string>(),
@@ -172,9 +182,35 @@ export const useConnectionStore = create<ConnectionState>()(
       isBannerDismissed: (connectionId) => {
         return get().dismissedBanners.has(connectionId);
       },
+
+      setKtrlPlaneConnections: (resources) => {
+        const connections = resources.map((resource) => ({
+          id: `ktrlplane-${resource.id}`,
+          name: `${resource.name} (KtrlPlane)`,
+          adtHost: resource.endpoint || "",
+          description: `Managed Graph instance in project ${resource.project_id}`,
+          authProvider: "ktrlplane" as AuthProvider,
+          isKtrlPlaneManaged: true,
+          ktrlPlaneResourceId: resource.id,
+          ktrlPlaneProjectId: resource.project_id,
+        }));
+        set({ ktrlPlaneConnections: connections });
+      },
+
+      getAllConnections: () => {
+        const state = get();
+        // KtrlPlane connections first, then local connections
+        return [...state.ktrlPlaneConnections, ...state.connections];
+      },
     }),
     {
       name: "konnektr-connections",
+      // Don't persist ktrlPlaneConnections
+      partialize: (state) => ({
+        connections: state.connections,
+        currentConnectionId: state.currentConnectionId,
+        dismissedBanners: state.dismissedBanners,
+      }),
       // Custom storage to handle Set serialization
       storage: {
         getItem: (name) => {
