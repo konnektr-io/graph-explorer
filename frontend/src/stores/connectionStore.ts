@@ -84,7 +84,7 @@ export const useConnectionStore = create<ConnectionState>()(
     (set, get) => ({
       connections: defaultConnections,
       ktrlPlaneConnections: [],
-      currentConnectionId: defaultConnections[0].id,
+      currentConnectionId: defaultConnections[0]?.id || null,
       isConnected: false,
       dismissedBanners: new Set<string>(),
 
