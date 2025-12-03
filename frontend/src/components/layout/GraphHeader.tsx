@@ -23,7 +23,7 @@ import { ConnectionSelector } from "@/components/ConnectionSelector";
 import { ConnectionStatus } from "@/components/ConnectionStatus";
 import { useAuth0 } from "@auth0/auth0-react";
 import { fetchGraphResources } from "@/services/ktrlplaneClient";
-import konnektrLogo from "../assets/konnektr.svg";
+import konnektrLogo from "@/assets/konnektr.svg";
 
 export function GraphHeader() {
   const {
