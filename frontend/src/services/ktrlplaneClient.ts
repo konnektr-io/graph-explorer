@@ -28,7 +28,7 @@ export async function fetchGraphResources(
   accessToken: string
 ): Promise<KtrlPlaneResource[]> {
   const response = await fetch(
-    `${KTRLPLANE_PROXY_BASE}/api/v1/resources?resource_type=graph`,
+    `${KTRLPLANE_PROXY_BASE}/resources?resource_type=Konnektr.Graph`,
     {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -53,7 +53,7 @@ export async function fetchProjectResources(
   projectId: string
 ): Promise<KtrlPlaneResource[]> {
   const response = await fetch(
-    `${KTRLPLANE_PROXY_BASE}/api/v1/projects/${projectId}/resources`,
+    `${KTRLPLANE_PROXY_BASE}/projects/${projectId}/resources`,
     {
       headers: {
         Authorization: `Bearer ${accessToken}`,
