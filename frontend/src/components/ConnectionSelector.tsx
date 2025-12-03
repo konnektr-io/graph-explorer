@@ -28,7 +28,10 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 export function ConnectionSelector(): React.ReactElement {
-  const connections = useConnectionStore((state) => state.connections);
+  const ktrlPlaneConnections = useConnectionStore(
+    (state) => state.ktrlPlaneConnections
+  );
+  const localConnections = useConnectionStore((state) => state.connections);
   const currentConnectionId = useConnectionStore(
     (state) => state.currentConnectionId
   );
@@ -120,9 +123,25 @@ export function ConnectionSelector(): React.ReactElement {
           <SelectValue placeholder="Select connection..." />
         </SelectTrigger>
         <SelectContent>
+          {ktrlPlaneConnections.length > 0 && (
+            <SelectGroup>
+              <SelectLabel>KtrlPlane Managed</SelectLabel>
+              {ktrlPlaneConnections.map((conn) => (
+                <SelectItem key={conn.id} value={conn.id}>
+                  <div className="flex items-center gap-2">
+                    <span>{conn.name}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          )}
           <SelectGroup>
-            <SelectLabel>Connections</SelectLabel>
-            {connections.map((conn) => (
+            <SelectLabel>
+              {ktrlPlaneConnections.length > 0
+                ? "Local Connections"
+                : "Connections"}
+            </SelectLabel>
+            {localConnections.map((conn) => (
               <SelectItem key={conn.id} value={conn.id}>
                 <div className="flex items-center gap-2">
                   <span>{conn.name}</span>

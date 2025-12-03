@@ -8,6 +8,7 @@ import { StatusBar } from "@/components/layout/StatusBar";
 import { ConnectionStatusBanner } from "@/components/ConnectionStatusBanner";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { CookieConsent } from "@/components/cookie-consent";
+import { KtrlPlaneAuthProvider } from "@/components/KtrlPlaneAuthProvider";
 
 function App() {
   const {
@@ -55,73 +56,75 @@ function App() {
   };
 
   return (
-    <ThemeProvider defaultTheme="system" storageKey="konnektr-graph-theme">
-      <div className="h-screen w-full flex flex-col bg-background text-foreground">
-        {/* Header */}
-        <GraphHeader />
+    <KtrlPlaneAuthProvider>
+      <ThemeProvider defaultTheme="system" storageKey="konnektr-graph-theme">
+        <div className="h-screen w-full flex flex-col bg-background text-foreground">
+          {/* Header */}
+          <GraphHeader />
 
-        {/* Connection Status Banner */}
-        <ConnectionStatusBanner />
+          {/* Connection Status Banner */}
+          <ConnectionStatusBanner />
 
-        {/* Main Content Area with Resizable Panels */}
-        <div className="flex-1 overflow-hidden">
-          <PanelGroup
-            direction="horizontal"
-            className="h-full"
-            key={`${showLeftPanel}-${showRightPanel}`} // Force re-render when panels change
-          >
-            {/* Left Sidebar */}
-            {showLeftPanel && (
-              <>
-                <Panel
-                  id="left-panel"
-                  defaultSize={leftPanelSize}
-                  minSize={15}
-                  maxSize={40}
-                  onResize={(size: number) => setPanelSize("left", size)}
-                  className="flex"
-                >
-                  <ModelSidebar />
-                </Panel>
-                <PanelResizeHandle className="w-1 bg-border hover:bg-border/80 transition-colors data-[resize-handle-active]:bg-primary" />
-              </>
-            )}
+          {/* Main Content Area with Resizable Panels */}
+          <div className="flex-1 overflow-hidden">
+            <PanelGroup
+              direction="horizontal"
+              className="h-full"
+              key={`${showLeftPanel}-${showRightPanel}`} // Force re-render when panels change
+            >
+              {/* Left Sidebar */}
+              {showLeftPanel && (
+                <>
+                  <Panel
+                    id="left-panel"
+                    defaultSize={leftPanelSize}
+                    minSize={15}
+                    maxSize={40}
+                    onResize={(size: number) => setPanelSize("left", size)}
+                    className="flex"
+                  >
+                    <ModelSidebar />
+                  </Panel>
+                  <PanelResizeHandle className="w-1 bg-border hover:bg-border/80 transition-colors data-[resize-handle-active]:bg-primary" />
+                </>
+              )}
 
-            {/* Center Content */}
-            <Panel id="center-panel" minSize={30} className="flex">
-              <MainContent />
-            </Panel>
+              {/* Center Content */}
+              <Panel id="center-panel" minSize={30} className="flex">
+                <MainContent />
+              </Panel>
 
-            {/* Right Inspector Panel */}
-            {showRightPanel && (
-              <>
-                <PanelResizeHandle className="w-1 bg-border hover:bg-border/80 transition-colors data-[resize-handle-active]:bg-primary" />
-                <Panel
-                  id="right-panel"
-                  defaultSize={rightPanelSize}
-                  minSize={15}
-                  maxSize={40}
-                  onResize={(size: number) => setPanelSize("right", size)}
-                  className="flex flex-col"
-                >
-                  <Inspector />
-                </Panel>
-              </>
-            )}
-          </PanelGroup>
+              {/* Right Inspector Panel */}
+              {showRightPanel && (
+                <>
+                  <PanelResizeHandle className="w-1 bg-border hover:bg-border/80 transition-colors data-[resize-handle-active]:bg-primary" />
+                  <Panel
+                    id="right-panel"
+                    defaultSize={rightPanelSize}
+                    minSize={15}
+                    maxSize={40}
+                    onResize={(size: number) => setPanelSize("right", size)}
+                    className="flex flex-col"
+                  >
+                    <Inspector />
+                  </Panel>
+                </>
+              )}
+            </PanelGroup>
+          </div>
+
+          {/* Status Bar */}
+          <StatusBar />
+
+          {/* Cookie Consent Popup */}
+          <CookieConsent
+            variant="minimal"
+            onAcceptCallback={handleAccept}
+            onDeclineCallback={handleDecline}
+          />
         </div>
-
-        {/* Status Bar */}
-        <StatusBar />
-
-        {/* Cookie Consent Popup */}
-        <CookieConsent
-          variant="minimal"
-          onAcceptCallback={handleAccept}
-          onDeclineCallback={handleDecline}
-        />
-      </div>
-    </ThemeProvider>
+      </ThemeProvider>
+    </KtrlPlaneAuthProvider>
   );
 }
 

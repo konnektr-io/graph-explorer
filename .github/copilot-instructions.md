@@ -27,13 +27,25 @@
 - **Type guards:** Use explicit type guards for Digital Twin and Relationship objects (see `queryResultsTransformer.ts`).
 - **No mock data in production.** All mocks are being phased out in favor of real API calls.
 - **Environment config:** Auth provider and API endpoints are set via `.env` and Vite env variables.
+- **KtrlPlane Integration:** App wraps with `KtrlPlaneAuthProvider` for platform authentication. Users can sign in to access their managed Graph resources, which appear automatically in the connection selector.
 
 ## Integration Points
 
-- **External APIs:** Azure Digital Twins, Konnektr Graph, Auth0, MSAL, generic OAuth.
+- **External APIs:** Azure Digital Twins, Konnektr Graph, KtrlPlane Control Plane API
+- **Authentication:** Auth0 (for KtrlPlane platform), MSAL (for Azure Digital Twins), Auth0 (for custom connections)
 - **Graph Visualization:** Sigma.js, Graphology.
 - **Editor:** Monaco Editor for Cypher/SQL queries.
 - **Design System:** Shadcn/UI, Radix UI, TailwindCSS.
+
+## Authentication Architecture
+
+- **Dual Auth0 Audiences:**
+  - `https://api.ktrlplane.konnektr.io` for Control Plane API (user management, resource listing)
+  - `https://graph.konnektr.io` for Graph API access (digital twin operations)
+- **KtrlPlaneAuthProvider:** Main Auth0 provider wrapping the app for platform authentication
+- **Connection-Specific Auth:** Each connection can have its own auth config (MSAL, Auth0, or none)
+- **KtrlPlane-Managed Connections:** Automatically fetched when user signs in, use platform auth with Graph audience
+- **Local Connections:** Stored in local storage, use user-configured authentication
 
 ## Key Files & Directories
 
