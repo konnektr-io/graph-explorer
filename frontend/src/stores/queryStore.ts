@@ -49,7 +49,13 @@ export interface QueryState {
 
   // New actions for query execution
   setCurrentQuery: (query: string) => void;
-  executeQuery: (query: string) => Promise<void>;
+  clearQueryResults: () => void;
+  executeQuery: (
+    query: string,
+    getAccessTokenSilently?: (options?: {
+      authorizationParams?: { audience?: string };
+    }) => Promise<string>
+  ) => Promise<void>;
   setShowHistory: (show: boolean) => void;
 }
 
@@ -152,8 +158,10 @@ export const useQueryStore = create<QueryState>()(
 
       // New action methods
       setCurrentQuery: (query) => set({ currentQuery: query }),
+      
+      clearQueryResults: () => set({ queryResults: null, queryError: null }),
 
-      executeQuery: async (query) => {
+      executeQuery: async (query, getAccessTokenSilently) => {
         set({ isExecuting: true, queryError: null });
         const startTime = Date.now();
 
@@ -169,8 +177,8 @@ export const useQueryStore = create<QueryState>()(
             );
           }
 
-          // Get authenticated client
-          const client = await digitalTwinsClientFactory(connection);
+          // Get authenticated client with optional Auth0 context for KtrlPlane
+          const client = await digitalTwinsClientFactory(connection, getAccessTokenSilently);
 
           // Execute query using Azure SDK
           const queryResult = client.queryTwins(query);

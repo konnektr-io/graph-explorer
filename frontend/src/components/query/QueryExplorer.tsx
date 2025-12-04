@@ -6,6 +6,7 @@ import { QueryHistory } from "@/components/query/QueryHistory";
 import { Button } from "@/components/ui/button";
 import { Play, Save, History, Settings2 } from "lucide-react";
 import { useQueryStore } from "@/stores/queryStore";
+import { useAuth0 } from "@auth0/auth0-react";
 
 export function QueryExplorer() {
   const {
@@ -19,12 +20,14 @@ export function QueryExplorer() {
     setShowHistory,
   } = useQueryStore();
 
+  const { getAccessTokenSilently } = useAuth0();
+
   const [verticalSizes, setVerticalSizes] = useState([60, 40]);
   const editorRef = useRef<any>(null);
 
   const handleRunQuery = async () => {
     if (!currentQuery.trim()) return;
-    await executeQuery(currentQuery);
+    await executeQuery(currentQuery, getAccessTokenSilently);
   };
 
   const handleSaveQuery = () => {

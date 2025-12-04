@@ -120,6 +120,16 @@ export const useConnectionStore = create<ConnectionState>()(
         ];
         const conn = allConnections.find((c) => c.id === id);
         if (conn) {
+          // Clear previous connection data before switching
+          // Import stores dynamically to avoid circular dependencies
+          const { useQueryStore } = await import("./queryStore");
+          const { useModelsStore } = await import("./modelsStore");
+          const { useInspectorStore } = await import("./inspectorStore");
+          
+          useQueryStore.getState().clearQueryResults();
+          useModelsStore.getState().clearModels();
+          useInspectorStore.getState().clearSelection();
+          
           set({ currentConnectionId: id, isConnected: true });
 
           // For MSAL connections, just initialize the credential (don't call getToken yet)
@@ -200,21 +210,23 @@ export const useConnectionStore = create<ConnectionState>()(
       },
 
       setKtrlPlaneConnections: (resources) => {
-        // Filter out resources without valid endpoints
-        const connections = resources
-          .filter(
-            (resource) => resource.endpoint && resource.endpoint.trim() !== ""
-          )
-          .map((resource) => ({
-            id: `ktrlplane-${resource.id}`,
-            name: `${resource.name}`,
-            adtHost: resource.endpoint!,
+        // Map all resources - endpoint will be constructed from resource_id if not provided
+        const connections = resources.map((resource) => {
+          // Construct endpoint from resource_id if not explicitly provided
+          const endpoint = resource.endpoint || 
+            `${resource.resource_id}.graph.konnektr.io`;
+          
+          return {
+            id: `ktrlplane-${resource.resource_id}`,
+            name: resource.name,
+            adtHost: endpoint,
             description: `Managed by KtrlPlane (${resource.sku})`,
             authProvider: "ktrlplane" as AuthProvider,
             isKtrlPlaneManaged: true,
-            ktrlPlaneResourceId: resource.id,
+            ktrlPlaneResourceId: resource.resource_id,
             ktrlPlaneProjectId: resource.project_id,
-          }));
+          };
+        });
         set({ ktrlPlaneConnections: connections });
         console.log(`Configured ${connections.length} KtrlPlane connections`);
       },

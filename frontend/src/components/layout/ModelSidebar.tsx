@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useInspectorStore } from "@/stores/inspectorStore";
 import { useModelsStore } from "@/stores/modelsStore";
+import { useAuth0 } from "@auth0/auth0-react";
 import { useDigitalTwinsStore } from "@/stores/digitalTwinsStore";
 import { getModelDisplayName } from "@/utils/dtdlHelpers";
 import type { DigitalTwinsModelDataExtended } from "@/types";
@@ -180,11 +181,13 @@ export function ModelSidebar() {
     error: twinsError,
   } = useDigitalTwinsStore();
 
+  const { getAccessTokenSilently } = useAuth0();
+
   // Load models and twins on mount
   useEffect(() => {
-    loadModels();
-    loadTwins();
-  }, [loadModels, loadTwins]);
+    loadModels(getAccessTokenSilently);
+    loadTwins(getAccessTokenSilently);
+  }, [loadModels, loadTwins, getAccessTokenSilently]);
 
   const isLoading = modelsLoading || twinsLoading;
   const error = modelsError || twinsError;
@@ -322,8 +325,8 @@ export function ModelSidebar() {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        loadModels();
-                        loadTwins();
+                        loadModels(getAccessTokenSilently);
+                        loadTwins(getAccessTokenSilently);
                       }}
                       className="mt-2"
                     >

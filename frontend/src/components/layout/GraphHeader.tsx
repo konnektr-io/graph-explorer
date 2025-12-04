@@ -1,12 +1,5 @@
 import { useEffect } from "react";
-import {
-  Settings,
-  LogOut,
-  Menu,
-  PanelRightOpen,
-  PanelLeftOpen,
-  LogIn,
-} from "lucide-react";
+import { LogOut, PanelRightOpen, PanelLeftOpen, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -20,7 +13,6 @@ import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { useConnectionStore } from "../../stores/connectionStore";
 import { ModeToggle } from "../mode-toggle";
 import { ConnectionSelector } from "@/components/ConnectionSelector";
-import { ConnectionStatus } from "@/components/ConnectionStatus";
 import { useAuth0 } from "@auth0/auth0-react";
 import { fetchGraphResources } from "@/services/ktrlplaneClient";
 import konnektrLogo from "@/assets/konnektr.svg";
@@ -152,10 +144,10 @@ export function GraphHeader() {
           )}
 
           {/* Connection Status */}
-          <ConnectionStatus />
+          {/* <ConnectionStatus /> */}
 
           {/* Settings Menu */}
-          <DropdownMenu>
+          {/*<DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm">
                 <Menu className="h-4 w-4" />
@@ -167,7 +159,7 @@ export function GraphHeader() {
                 Settings
               </DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
+          </DropdownMenu>*/}
 
           {/* User Menu */}
           <DropdownMenu>

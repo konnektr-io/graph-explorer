@@ -36,7 +36,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Trash2, MoreVertical } from "lucide-react";
+import { Trash2, MoreVertical, RefreshCw, Pencil } from "lucide-react";
+import { useAuth0 } from "@auth0/auth0-react";
+import { fetchGraphResources } from "@/services/ktrlplaneClient";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,9 +61,20 @@ export function ConnectionSelector(): React.ReactElement {
   const removeConnection = useConnectionStore(
     (state) => state.removeConnection
   );
+  const updateConnection = useConnectionStore(
+    (state) => state.updateConnection
+  );
+  const setKtrlPlaneConnections = useConnectionStore(
+    (state) => state.setKtrlPlaneConnections
+  );
+
+  const { isAuthenticated, getAccessTokenSilently } = useAuth0();
 
   const [open, setOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editingConnectionId, setEditingConnectionId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [form, setForm] = useState({
     name: "",
     adtHost: "",
@@ -76,6 +89,46 @@ export function ConnectionSelector(): React.ReactElement {
     audience: "",
   });
   const [error, setError] = useState<string | null>(null);
+
+  const handleRefresh = async () => {
+    if (!isAuthenticated) return;
+    
+    setIsRefreshing(true);
+    try {
+      const token = await getAccessTokenSilently({
+        authorizationParams: {
+          audience:
+            import.meta.env.VITE_AUTH0_KTRLPLANE_AUDIENCE ||
+            "https://ktrlplane.konnektr.io",
+        },
+      });
+      const resources = await fetchGraphResources(token);
+      setKtrlPlaneConnections(resources);
+    } catch (error) {
+      console.error("Failed to refresh KtrlPlane resources:", error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleEdit = () => {
+    if (!currentConnection || currentConnection.isKtrlPlaneManaged) return;
+    
+    setEditMode(true);
+    setEditingConnectionId(currentConnection.id);
+    setForm({
+      name: currentConnection.name,
+      adtHost: currentConnection.adtHost,
+      description: currentConnection.description || "",
+      authProvider: currentConnection.authProvider,
+      clientId: currentConnection.authConfig?.clientId || "",
+      tenantId: currentConnection.authConfig?.tenantId || "",
+      scopes: currentConnection.authConfig?.scopes?.join(", ") || "",
+      domain: currentConnection.authConfig?.domain || "",
+      audience: currentConnection.authConfig?.audience || "",
+    });
+    setOpen(true);
+  };
 
   const handleAdd = async () => {
     if (!form.name.trim() || !form.adtHost.trim()) {
@@ -117,8 +170,15 @@ export function ConnectionSelector(): React.ReactElement {
       return;
     }
 
-    addConnection(newConnection);
-    await setCurrentConnection(newConnection.id);
+    if (editMode && editingConnectionId) {
+      // Update existing connection
+      updateConnection(editingConnectionId, newConnection);
+    } else {
+      // Add new connection
+      addConnection(newConnection);
+      await setCurrentConnection(newConnection.id);
+    }
+    
     setForm({
       name: "",
       adtHost: "",
@@ -131,6 +191,8 @@ export function ConnectionSelector(): React.ReactElement {
       audience: "",
     });
     setError(null);
+    setEditMode(false);
+    setEditingConnectionId(null);
     setOpen(false);
   };
 
@@ -139,6 +201,11 @@ export function ConnectionSelector(): React.ReactElement {
     ktrlPlaneConnections.find((c) => c.id === currentConnectionId);
 
   const canDeleteCurrent =
+    currentConnection &&
+    !currentConnection.isKtrlPlaneManaged &&
+    currentConnection.id !== "localhost";
+
+  const canEditCurrent =
     currentConnection &&
     !currentConnection.isKtrlPlaneManaged &&
     currentConnection.id !== "localhost";
@@ -198,7 +265,7 @@ export function ConnectionSelector(): React.ReactElement {
         </SelectContent>
       </Select>
 
-      {canDeleteCurrent && (
+      {(isAuthenticated || canEditCurrent || canDeleteCurrent) && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
@@ -206,13 +273,27 @@ export function ConnectionSelector(): React.ReactElement {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={handleDeleteClick}
-              className="text-destructive"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Remove Connection
-            </DropdownMenuItem>
+            {isAuthenticated && (
+              <DropdownMenuItem onClick={handleRefresh} disabled={isRefreshing}>
+                <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Refresh KtrlPlane Resources
+              </DropdownMenuItem>
+            )}
+            {canEditCurrent && (
+              <DropdownMenuItem onClick={handleEdit}>
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit Connection
+              </DropdownMenuItem>
+            )}
+            {canDeleteCurrent && (
+              <DropdownMenuItem
+                onClick={handleDeleteClick}
+                className="text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Remove Connection
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       )}
@@ -225,7 +306,7 @@ export function ConnectionSelector(): React.ReactElement {
         </DialogTrigger>
         <DialogContent className="max-h-[90vh]">
           <DialogHeader>
-            <DialogTitle>Add Connection</DialogTitle>
+            <DialogTitle>{editMode ? "Edit Connection" : "Add Connection"}</DialogTitle>
           </DialogHeader>
           <ScrollArea className="max-h-[60vh] pr-4">
             <form
@@ -408,7 +489,7 @@ export function ConnectionSelector(): React.ReactElement {
           </ScrollArea>
           <DialogFooter>
             <Button type="submit" form="connection-form">
-              Add Connection
+              {editMode ? "Save Changes" : "Add Connection"}
             </Button>
             <DialogClose asChild>
               <Button type="button" variant="ghost">

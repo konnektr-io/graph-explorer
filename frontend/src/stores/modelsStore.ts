@@ -49,7 +49,11 @@ export interface ModelsState {
   };
 
   // Actions - Models
-  loadModels: () => Promise<void>;
+  loadModels: (
+    getAccessTokenSilently?: (options?: {
+      authorizationParams?: { audience?: string };
+    }) => Promise<string>
+  ) => Promise<void>;
   getModelById: (modelId: string) => Promise<DigitalTwinsModelData>;
   uploadModel: (model: DtdlInterface) => Promise<string>;
   uploadModels: (models: DtdlInterface[]) => Promise<DigitalTwinsModelData[]>;
@@ -81,6 +85,7 @@ export interface ModelsState {
 
   // Actions - Utility
   clearError: () => void;
+  clearModels: () => void;
   reset: () => void;
 }
 
@@ -107,10 +112,18 @@ export const useModelsStore = create<ModelsState>()(
     validation: {},
 
     // Models actions
-    loadModels: async () => {
+    loadModels: async (getAccessTokenSilently) => {
       set({ isLoading: true, error: null });
       try {
-        const client = await getClient();
+        const { getCurrentConnection, isConnected } = useConnectionStore.getState();
+        const connection = getCurrentConnection();
+        if (!connection || !isConnected) {
+          throw new Error(
+            "Not connected to Digital Twins instance. Please configure connection."
+          );
+        }
+        
+        const client = await digitalTwinsClientFactory(connection, getAccessTokenSilently);
         const list: DigitalTwinsModelDataExtended[] = [];
 
         const models = client.listModels({
@@ -607,6 +620,10 @@ export const useModelsStore = create<ModelsState>()(
     clearError: () => {
       set({ error: null });
     },
+    
+    clearModels: () => {
+      set({ models: [], selectedModelId: null, error: null });
+    },
 
     reset: () => {
       set({
@@ -621,15 +638,5 @@ export const useModelsStore = create<ModelsState>()(
   }))
 );
 
-// Subscribe to connection changes to auto-reload models
-useConnectionStore.subscribe(
-  (state) => state.currentConnectionId,
-  (currentConnectionId, previousConnectionId) => {
-    // Only reload if connection actually changed and we have a connection
-    if (currentConnectionId && currentConnectionId !== previousConnectionId) {
-      console.log("Connection changed, reloading models...");
-      const { loadModels } = useModelsStore.getState();
-      loadModels();
-    }
-  }
-);
+// Models are now cleared on connection change by connectionStore
+// Components should call loadModels() when needed with Auth0 context

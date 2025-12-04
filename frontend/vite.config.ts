@@ -19,7 +19,7 @@ export default defineConfig({
     }),
     // Custom plugin to register proxy middleware
     {
-      name: "configure-adt-proxy",
+      name: "configure-proxy",
       configureServer(server) {
         // Register custom proxy middleware for Azure Digital Twins
         setupProxy(server.middlewares);

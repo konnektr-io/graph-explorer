@@ -105,4 +105,61 @@ export function setupProxy(app: Connect.Server): void {
   console.log(
     "[Dev Proxy] ✓ Azure Digital Twins proxy middleware registered at /api/proxy"
   );
+
+  // KtrlPlane API proxy for local development
+  const ktrlplaneProxy = createProxyMiddleware({
+    target: "https://ktrlplane.konnektr.io/api/v1",
+    changeOrigin: true,
+    secure: false, // Disable SSL verification for local dev
+    logger: console,
+    pathFilter: "/api/ktrlplane",
+    pathRewrite: (path: string) => {
+      // Remove /api/ktrlplane prefix from the path
+      return path.replace(/^\/api\/ktrlplane/, "");
+    },
+    on: {
+      proxyReq: (proxyReq, req: any) => {
+        console.log(`[Dev Proxy KtrlPlane] Request:`, {
+          method: req.method,
+          url: req.url,
+          "content-type": req.headers["content-type"],
+          authorization: req.headers["authorization"] ? "Bearer ***" : "none",
+        });
+
+        if (proxyReq.getHeader("origin")) {
+          proxyReq.removeHeader("origin");
+          proxyReq.removeHeader("referer");
+        }
+      },
+      proxyRes: (proxyRes, req: any) => {
+        const contentLength = proxyRes.headers["content-length"] || "unknown";
+        console.log(
+          `[Dev Proxy KtrlPlane] Response: ${req.method} ${req.url} -> ${proxyRes.statusCode} (${contentLength} bytes)`
+        );
+      },
+      error: (err, req: any, res: any) => {
+        console.error(
+          `[Dev Proxy KtrlPlane] Error: ${req.method} ${req.url}`,
+          err.message
+        );
+        if (!res.headersSent) {
+          res.writeHead(500, {
+            "Content-Type": "application/json",
+          });
+          res.end(
+            JSON.stringify({
+              error: "KtrlPlane proxy error",
+              message: err.message,
+            })
+          );
+        }
+      },
+    },
+  });
+
+  app.use(ktrlplaneProxy as Connect.NextHandleFunction);
+
+  console.log(
+    "[Dev Proxy] ✓ KtrlPlane API proxy middleware registered at /api/ktrlplane"
+  );
 }

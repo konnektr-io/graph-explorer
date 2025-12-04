@@ -49,7 +49,11 @@ export interface DigitalTwinsState {
   };
 
   // Actions - Twins
-  loadTwins: () => Promise<void>;
+  loadTwins: (
+    getAccessTokenSilently?: (options?: {
+      authorizationParams?: { audience?: string };
+    }) => Promise<string>
+  ) => Promise<void>;
   createTwin: (twin: BasicDigitalTwin) => Promise<string>;
   updateTwin: (
     twinId: string,
@@ -59,10 +63,18 @@ export interface DigitalTwinsState {
   getTwin: (twinId: string) => BasicDigitalTwin | undefined;
   getTwinById: (twinId: string) => Promise<BasicDigitalTwin>;
   getTwinsByModel: (modelId: string) => BasicDigitalTwin[];
-  queryTwins: (query: string) => Promise<QueryResponseData>;
+  queryTwins: (
+    query: string,
+    getAccessTokenSilently?: (options?: {
+      authorizationParams?: { audience?: string };
+    }) => Promise<string>
+  ) => Promise<QueryResponseData>;
 
   // Actions - Relationships
-  loadRelationships: (twinId?: string) => Promise<void>;
+  loadRelationships: (
+    twinId?: string,
+    getAccessTokenSilently?: (options?: {\n      authorizationParams?: { audience?: string };\n    }) => Promise<string>
+  ) => Promise<void>;
   createRelationship: (relationship: BasicRelationship) => Promise<string>;
   updateRelationship: (
     sourceTwinId: string,
@@ -120,10 +132,10 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
     filter: {},
 
     // Twins actions
-    loadTwins: async () => {
+    loadTwins: async (getAccessTokenSilently) => {
       set({ isLoading: true, error: null });
       try {
-        const queryResult = await get().queryTwins(QUERY_ALL_TWINS);
+        const queryResult = await get().queryTwins(QUERY_ALL_TWINS, getAccessTokenSilently);
 
         set({
           twins: queryResult.twins,
@@ -273,8 +285,16 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
       return get().twins.filter((twin) => twin.$metadata.$model === modelId);
     },
 
-    queryTwins: async (query) => {
-      const client = await getClient();
+    queryTwins: async (query, getAccessTokenSilently) => {
+      const { getCurrentConnection, isConnected } = useConnectionStore.getState();
+      const connection = getCurrentConnection();
+      if (!connection || !isConnected) {
+        throw new Error(
+          "Not connected to Digital Twins instance. Please configure connection."
+        );
+      }
+      
+      const client = await digitalTwinsClientFactory(connection, getAccessTokenSilently);
       const result: QueryResponseData = {
         twins: [],
         relationships: [],
@@ -297,7 +317,7 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
     },
 
     // Relationships actions
-    loadRelationships: async (twinId) => {
+    loadRelationships: async (twinId, getAccessTokenSilently) => {
       set({ isLoading: true, error: null });
       try {
         if (twinId) {
@@ -306,7 +326,8 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
         } else {
           // Load all relationships via query
           const queryResult = await get().queryTwins(
-            "SELECT * FROM RELATIONSHIPS"
+            "SELECT * FROM RELATIONSHIPS",
+            getAccessTokenSilently
           );
           set({ relationships: queryResult.relationships, isLoading: false });
         }

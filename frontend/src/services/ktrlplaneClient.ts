@@ -6,17 +6,17 @@
 const KTRLPLANE_PROXY_BASE = "/api/ktrlplane";
 
 /**
- * KtrlPlane resource type
+ * KtrlPlane resource type (API response format)
  */
 export interface KtrlPlaneResource {
-  id: string;
+  resource_id: string;
   project_id: string;
   name: string;
-  resource_type: string;
+  type: string;
   sku: string;
   status: string;
   endpoint?: string;
-  metadata?: Record<string, unknown>;
+  settings_json?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
