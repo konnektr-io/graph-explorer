@@ -125,11 +125,11 @@ export const useConnectionStore = create<ConnectionState>()(
           const { useQueryStore } = await import("./queryStore");
           const { useModelsStore } = await import("./modelsStore");
           const { useInspectorStore } = await import("./inspectorStore");
-          
+
           useQueryStore.getState().clearQueryResults();
           useModelsStore.getState().clearModels();
           useInspectorStore.getState().clearSelection();
-          
+
           set({ currentConnectionId: id, isConnected: true });
 
           // For MSAL connections, just initialize the credential (don't call getToken yet)
@@ -213,9 +213,9 @@ export const useConnectionStore = create<ConnectionState>()(
         // Map all resources - endpoint will be constructed from resource_id if not provided
         const connections = resources.map((resource) => {
           // Construct endpoint from resource_id if not explicitly provided
-          const endpoint = resource.endpoint || 
-            `${resource.resource_id}.graph.konnektr.io`;
-          
+          const endpoint =
+            resource.endpoint || `${resource.resource_id}.graph.konnektr.io`;
+
           return {
             id: `ktrlplane-${resource.resource_id}`,
             name: resource.name,
