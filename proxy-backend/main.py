@@ -12,7 +12,7 @@ PROXY_PREFIX = "/api/proxy"
 KTRLPLANE_PROXY_PREFIX = "/api/ktrlplane"
 KTRLPLANE_BASE_URL = os.getenv(
     "KTRLPLANE_BASE_URL",
-    "http://ktrlplane-backend-service.ktrlplane.svc.cluster.local/api/v1",
+    "http://ktrlplane-backend-service.ktrlplane.svc.cluster.local:8080/api/v1",
 )
 
 
@@ -81,7 +81,7 @@ async def ktrlplane_proxy(full_path: str, request: Request):
     headers.pop("referer", None)
 
     try:
-        async with httpx.AsyncClient(verify=True) as client:
+        async with httpx.AsyncClient(verify=True, timeout=30.0) as client:
             req = client.build_request(
                 request.method,
                 target_url,
@@ -102,8 +102,19 @@ async def ktrlplane_proxy(full_path: str, request: Request):
                     if k.lower() != "content-length"
                 },
             )
+    except httpx.ConnectError as e:
+        logger.error(f"KtrlPlane connection error - cannot reach {target_url}: {e}")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Cannot connect to KtrlPlane API at {target_url}. Service may be unavailable.",
+        )
+    except httpx.TimeoutException as e:
+        logger.error(f"KtrlPlane timeout error for {target_url}: {e}")
+        raise HTTPException(
+            status_code=504, detail=f"Timeout connecting to KtrlPlane API: {str(e)}"
+        )
     except Exception as e:
-        logger.error(f"KtrlPlane proxy error: {e}")
+        logger.error(f"KtrlPlane proxy error: {type(e).__name__}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Proxy error: {str(e)}")
 
 
