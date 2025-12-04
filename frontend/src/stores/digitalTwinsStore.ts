@@ -71,10 +71,7 @@ export interface DigitalTwinsState {
   ) => Promise<QueryResponseData>;
 
   // Actions - Relationships
-  loadRelationships: (
-    twinId?: string,
-    getAccessTokenSilently?: (options?: {\n      authorizationParams?: { audience?: string };\n    }) => Promise<string>
-  ) => Promise<void>;
+  loadRelationships: (twinId?: string) => Promise<void>;
   createRelationship: (relationship: BasicRelationship) => Promise<string>;
   updateRelationship: (
     sourceTwinId: string,
