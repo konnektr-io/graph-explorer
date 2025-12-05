@@ -216,27 +216,41 @@ export function useAuth0Credential(
  */
 export class KtrlPlaneGraphTokenCredential implements TokenCredential {
   private getAccessTokenSilently: (options?: {
-    authorizationParams?: { audience?: string };
+    authorizationParams?: { audience?: string; scope?: string };
+  }) => Promise<string>;
+  private getAccessTokenWithPopup: (options?: {
+    authorizationParams?: { audience?: string; scope?: string };
   }) => Promise<string>;
 
   constructor(
     getAccessTokenSilently: (options?: {
-      authorizationParams?: { audience?: string };
+      authorizationParams?: { audience?: string; scope?: string };
+    }) => Promise<string>,
+    getAccessTokenWithPopup: (options?: {
+      authorizationParams?: { audience?: string; scope?: string };
     }) => Promise<string>
   ) {
     this.getAccessTokenSilently = getAccessTokenSilently;
+    this.getAccessTokenWithPopup = getAccessTokenWithPopup;
   }
 
   /**
    * Get access token for Graph API (with graph audience)
+   * Falls back to popup if silent acquisition fails
    */
   async getToken(): Promise<{ token: string; expiresOnTimestamp: number }> {
+    const audience =
+      import.meta.env.VITE_AUTH0_GRAPH_AUDIENCE || "https://graph.konnektr.io";
+    const scope =
+      import.meta.env.VITE_AUTH0_GRAPH_SCOPE ||
+      "https://graph.konnektr.io/default";
+
     try {
+      // Try silent first
       const token = await this.getAccessTokenSilently({
         authorizationParams: {
-          audience:
-            import.meta.env.VITE_AUTH0_GRAPH_AUDIENCE ||
-            "https://graph.konnektr.io",
+          audience,
+          scope,
         },
       });
 
@@ -244,9 +258,31 @@ export class KtrlPlaneGraphTokenCredential implements TokenCredential {
         token,
         expiresOnTimestamp: Date.now() + 3600000,
       };
-    } catch (error) {
-      console.error("Failed to get KtrlPlane Graph token:", error);
-      throw new Error("Authentication required. Please sign in to KtrlPlane.");
+    } catch (silentError) {
+      console.warn(
+        "Silent token acquisition failed, trying popup:",
+        silentError
+      );
+
+      try {
+        // Fallback to popup if silent fails (e.g., missing refresh token)
+        const token = await this.getAccessTokenWithPopup({
+          authorizationParams: {
+            audience,
+            scope,
+          },
+        });
+
+        return {
+          token,
+          expiresOnTimestamp: Date.now() + 3600000,
+        };
+      } catch (popupError) {
+        console.error("Failed to get KtrlPlane Graph token:", popupError);
+        throw new Error(
+          "Authentication required. Please sign in to KtrlPlane."
+        );
+      }
     }
   }
 }
@@ -281,9 +317,7 @@ export async function getTokenCredential(
   if (authProvider === "ktrlplane") {
     // For KtrlPlane-managed connections, the credential will be provided by
     // the digitalTwinsClientFactory with Auth0 context
-    throw new Error(
-      "KtrlPlane credentials must be created with Auth0 context"
-    );
+    throw new Error("KtrlPlane credentials must be created with Auth0 context");
   }
 
   if (authProvider === "auth0") {

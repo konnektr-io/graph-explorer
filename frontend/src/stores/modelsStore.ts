@@ -51,7 +51,10 @@ export interface ModelsState {
   // Actions - Models
   loadModels: (
     getAccessTokenSilently?: (options?: {
-      authorizationParams?: { audience?: string };
+      authorizationParams?: { audience?: string; scope?: string };
+    }) => Promise<string>,
+    getAccessTokenWithPopup?: (options?: {
+      authorizationParams?: { audience?: string; scope?: string };
     }) => Promise<string>
   ) => Promise<void>;
   getModelById: (modelId: string) => Promise<DigitalTwinsModelData>;
@@ -112,18 +115,22 @@ export const useModelsStore = create<ModelsState>()(
     validation: {},
 
     // Models actions
-    loadModels: async (getAccessTokenSilently) => {
+    loadModels: async (getAccessTokenSilently, getAccessTokenWithPopup) => {
       set({ isLoading: true, error: null });
       try {
-        const { getCurrentConnection, isConnected } = useConnectionStore.getState();
+        const { getCurrentConnection } = useConnectionStore.getState();
         const connection = getCurrentConnection();
-        if (!connection || !isConnected) {
+        if (!connection) {
           throw new Error(
-            "Not connected to Digital Twins instance. Please configure connection."
+            "No connection selected. Please select a connection."
           );
         }
-        
-        const client = await digitalTwinsClientFactory(connection, getAccessTokenSilently);
+
+        const client = await digitalTwinsClientFactory(
+          connection,
+          getAccessTokenSilently,
+          getAccessTokenWithPopup
+        );
         const list: DigitalTwinsModelDataExtended[] = [];
 
         const models = client.listModels({
@@ -620,7 +627,7 @@ export const useModelsStore = create<ModelsState>()(
     clearError: () => {
       set({ error: null });
     },
-    
+
     clearModels: () => {
       set({ models: [], selectedModelId: null, error: null });
     },

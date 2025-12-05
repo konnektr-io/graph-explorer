@@ -53,7 +53,10 @@ export interface QueryState {
   executeQuery: (
     query: string,
     getAccessTokenSilently?: (options?: {
-      authorizationParams?: { audience?: string };
+      authorizationParams?: { audience?: string; scope?: string };
+    }) => Promise<string>,
+    getAccessTokenWithPopup?: (options?: {
+      authorizationParams?: { audience?: string; scope?: string };
     }) => Promise<string>
   ) => Promise<void>;
   setShowHistory: (show: boolean) => void;
@@ -158,27 +161,45 @@ export const useQueryStore = create<QueryState>()(
 
       // New action methods
       setCurrentQuery: (query) => set({ currentQuery: query }),
-      
+
       clearQueryResults: () => set({ queryResults: null, queryError: null }),
 
-      executeQuery: async (query, getAccessTokenSilently) => {
+      executeQuery: async (
+        query,
+        getAccessTokenSilently,
+        getAccessTokenWithPopup
+      ) => {
         set({ isExecuting: true, queryError: null });
         const startTime = Date.now();
 
         try {
           // Get current connection
-          const { getCurrentConnection, isConnected } =
-            useConnectionStore.getState();
+          const { getCurrentConnection } = useConnectionStore.getState();
           const connection = getCurrentConnection();
 
-          if (!connection || !isConnected) {
+          if (!connection) {
             throw new Error(
-              "Not connected to Digital Twins instance. Please configure connection."
+              "No connection selected. Please select a connection."
             );
           }
 
+          console.log(
+            "Executing query for connection:",
+            connection.id,
+            connection.authProvider
+          );
+          console.log("Has getAccessTokenSilently:", !!getAccessTokenSilently);
+          console.log(
+            "Has getAccessTokenWithPopup:",
+            !!getAccessTokenWithPopup
+          );
+
           // Get authenticated client with optional Auth0 context for KtrlPlane
-          const client = await digitalTwinsClientFactory(connection, getAccessTokenSilently);
+          const client = await digitalTwinsClientFactory(
+            connection,
+            getAccessTokenSilently,
+            getAccessTokenWithPopup
+          );
 
           // Execute query using Azure SDK
           const queryResult = client.queryTwins(query);

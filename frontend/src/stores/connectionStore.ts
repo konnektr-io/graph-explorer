@@ -49,7 +49,6 @@ interface ConnectionState {
   connections: Connection[];
   ktrlPlaneConnections: Connection[]; // Connections from KtrlPlane (not persisted)
   currentConnectionId: string | null;
-  isConnected: boolean;
   dismissedBanners: Set<string>; // Track dismissed connection banners by connection ID
 
   // Actions
@@ -58,7 +57,6 @@ interface ConnectionState {
   updateConnection: (id: string, updates: Partial<Connection>) => void;
   setCurrentConnection: (id: string) => Promise<void>;
   getCurrentConnection: () => Connection | null;
-  setIsConnected: (connected: boolean) => void;
   testConnection: (id: string) => Promise<boolean>;
   dismissBanner: (connectionId: string) => void;
   isBannerDismissed: (connectionId: string) => boolean;
@@ -85,7 +83,6 @@ export const useConnectionStore = create<ConnectionState>()(
       connections: defaultConnections,
       ktrlPlaneConnections: [],
       currentConnectionId: defaultConnections[0]?.id || null,
-      isConnected: false,
       dismissedBanners: new Set<string>(),
 
       addConnection: (conn) => {
@@ -113,12 +110,19 @@ export const useConnectionStore = create<ConnectionState>()(
       },
 
       setCurrentConnection: async (id) => {
+        console.log("setCurrentConnection called with id:", id);
         const state = get();
+        console.log("Current state:", {
+          ktrlPlaneConnections: state.ktrlPlaneConnections.length,
+          localConnections: state.connections.length,
+          currentConnectionId: state.currentConnectionId,
+        });
         const allConnections = [
           ...state.ktrlPlaneConnections,
           ...state.connections,
         ];
         const conn = allConnections.find((c) => c.id === id);
+        console.log("Found connection:", conn?.name, conn?.authProvider);
         if (conn) {
           // Clear previous connection data before switching
           // Import stores dynamically to avoid circular dependencies
@@ -130,9 +134,8 @@ export const useConnectionStore = create<ConnectionState>()(
           useModelsStore.getState().clearModels();
           useInspectorStore.getState().clearSelection();
 
-          set({ currentConnectionId: id, isConnected: true });
-
-          // For MSAL connections, just initialize the credential (don't call getToken yet)
+          set({ currentConnectionId: id });
+          console.log("Connection set to:", id); // For MSAL connections, just initialize the credential (don't call getToken yet)
           // This ensures MSAL is ready and handles any redirect responses
           if (conn.authProvider === "msal") {
             try {
@@ -160,10 +163,6 @@ export const useConnectionStore = create<ConnectionState>()(
         return (
           allConnections.find((c) => c.id === state.currentConnectionId) || null
         );
-      },
-
-      setIsConnected: (connected) => {
-        set({ isConnected: connected });
       },
 
       testConnection: async (id) => {
@@ -214,7 +213,8 @@ export const useConnectionStore = create<ConnectionState>()(
         const connections = resources.map((resource) => {
           // Construct endpoint from resource_id if not explicitly provided
           const endpoint =
-            resource.endpoint || `${resource.resource_id}.graph.konnektr.io`;
+            resource.endpoint ||
+            `${resource.resource_id}.api.graph.konnektr.io`;
 
           return {
             id: `ktrlplane-${resource.resource_id}`,

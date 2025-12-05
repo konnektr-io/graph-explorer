@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { ThemeProvider } from "@/components/theme-provider";
 import { GraphHeader } from "@/components/layout/GraphHeader";
@@ -7,6 +8,7 @@ import { Inspector } from "@/components/inspector/Inspector";
 import { StatusBar } from "@/components/layout/StatusBar";
 import { ConnectionStatusBanner } from "@/components/ConnectionStatusBanner";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
+import { useConnectionStore } from "@/stores/connectionStore";
 import { CookieConsent } from "@/components/cookie-consent";
 import { KtrlPlaneAuthProvider } from "@/components/KtrlPlaneAuthProvider";
 
@@ -18,6 +20,31 @@ function App() {
     rightPanelSize,
     setPanelSize,
   } = useWorkspaceStore();
+
+  const currentConnectionId = useConnectionStore(
+    (state) => state.currentConnectionId
+  );
+  const setCurrentConnection = useConnectionStore(
+    (state) => state.setCurrentConnection
+  );
+
+  // Initialize connection on app start if we have a saved connection
+  useEffect(() => {
+    console.log("App mounted, currentConnectionId:", currentConnectionId);
+    if (currentConnectionId) {
+      console.log("Initializing connection:", currentConnectionId);
+      setCurrentConnection(currentConnectionId)
+        .then(() => {
+          console.log("Connection initialized successfully");
+        })
+        .catch((error) => {
+          console.error("Failed to initialize connection:", error);
+        });
+    } else {
+      console.log("No connection to initialize");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   // Set GTM consent using gtag API
   const setGtmConsent = (consent: "accepted" | "declined") => {

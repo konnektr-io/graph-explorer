@@ -20,14 +20,23 @@ export function QueryExplorer() {
     setShowHistory,
   } = useQueryStore();
 
-  const { getAccessTokenSilently } = useAuth0();
+  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth0();
 
   const [verticalSizes, setVerticalSizes] = useState([60, 40]);
   const editorRef = useRef<any>(null);
 
+  // Wrapper to match expected signature
+  const getTokenWithPopup = async (options?: {
+    authorizationParams?: { audience?: string; scope?: string };
+  }) => {
+    const token = await getAccessTokenWithPopup(options);
+    if (!token) throw new Error("Failed to get token with popup");
+    return token;
+  };
+
   const handleRunQuery = async () => {
     if (!currentQuery.trim()) return;
-    await executeQuery(currentQuery, getAccessTokenSilently);
+    await executeQuery(currentQuery, getAccessTokenSilently, getTokenWithPopup);
   };
 
   const handleSaveQuery = () => {

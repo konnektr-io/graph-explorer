@@ -56,7 +56,8 @@ const getTwinsProxyPath = (): string => {
  * Digital Twins client factory that returns cached Digital Twins Client
  *
  * @param connection - Connection with auth provider and config
- * @param getAccessTokenSilently - Optional Auth0 token getter for KtrlPlane connections
+ * @param getAccessTokenSilently - Optional Auth0 silent token getter for KtrlPlane connections
+ * @param getAccessTokenWithPopup - Optional Auth0 popup token getter for KtrlPlane connections
  * @returns Promise that resolves to DigitalTwinsClient
  *
  * Note: This function is async because it needs to initialize MSAL if using MSAL auth
@@ -64,7 +65,10 @@ const getTwinsProxyPath = (): string => {
 export const digitalTwinsClientFactory = async (
   connection: Connection,
   getAccessTokenSilently?: (options?: {
-    authorizationParams?: { audience?: string };
+    authorizationParams?: { audience?: string; scope?: string };
+  }) => Promise<string>,
+  getAccessTokenWithPopup?: (options?: {
+    authorizationParams?: { audience?: string; scope?: string };
   }) => Promise<string>
 ): Promise<DigitalTwinsClient> => {
   const { adtHost } = connection;
@@ -72,18 +76,27 @@ export const digitalTwinsClientFactory = async (
   // Cache key includes connection ID to support different auth configs for same host
   const cacheKey = `${adtHost}:${connection.id}`;
 
-  if (!digitalTwinsClients[cacheKey]) {
+  // For KtrlPlane connections, always create a new client to ensure fresh Auth0 context
+  // For other auth providers, use cached client if available
+  const shouldCache = connection.authProvider !== "ktrlplane";
+
+  if (!shouldCache || !digitalTwinsClients[cacheKey]) {
     let tokenCredential;
 
     // Handle KtrlPlane-managed connections
     if (connection.authProvider === "ktrlplane") {
-      if (!getAccessTokenSilently) {
+      console.log(
+        "Creating KtrlPlane token credential, has getter:",
+        !!getAccessTokenSilently
+      );
+      if (!getAccessTokenSilently || !getAccessTokenWithPopup) {
         throw new Error(
           "KtrlPlane connections require Auth0 context. Please sign in."
         );
       }
       tokenCredential = new KtrlPlaneGraphTokenCredential(
-        getAccessTokenSilently
+        getAccessTokenSilently,
+        getAccessTokenWithPopup
       );
     } else {
       // Get token credential based on auth provider
@@ -101,7 +114,7 @@ export const digitalTwinsClientFactory = async (
 
     const customPolicy = createCustomProxyPolicy(adtHost, _pathRewrite);
 
-    digitalTwinsClients[cacheKey] = new DigitalTwinsClient(
+    const client = new DigitalTwinsClient(
       `https://${adtHost}/`,
       tokenCredential,
       {
@@ -109,6 +122,13 @@ export const digitalTwinsClientFactory = async (
         additionalPolicies: [{ policy: customPolicy, position: "perCall" }],
       }
     );
+
+    if (shouldCache) {
+      digitalTwinsClients[cacheKey] = client;
+    }
+
+    return client;
   }
+
   return digitalTwinsClients[cacheKey];
 };

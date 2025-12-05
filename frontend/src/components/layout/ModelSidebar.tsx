@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useInspectorStore } from "@/stores/inspectorStore";
 import { useModelsStore } from "@/stores/modelsStore";
+import { useConnectionStore } from "@/stores/connectionStore";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useDigitalTwinsStore } from "@/stores/digitalTwinsStore";
 import { getModelDisplayName } from "@/utils/dtdlHelpers";
@@ -181,13 +182,28 @@ export function ModelSidebar() {
     error: twinsError,
   } = useDigitalTwinsStore();
 
-  const { getAccessTokenSilently } = useAuth0();
+  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth0();
+  const currentConnection = useConnectionStore((state) =>
+    state.getCurrentConnection()
+  );
 
-  // Load models and twins on mount
+  // Wrapper to match expected signature
+  const getTokenWithPopup = async (options?: {
+    authorizationParams?: { audience?: string; scope?: string };
+  }) => {
+    const token = await getAccessTokenWithPopup(options);
+    if (!token) throw new Error("Failed to get token with popup");
+    return token;
+  };
+
+  // Load models and twins when we have a connection
   useEffect(() => {
-    loadModels(getAccessTokenSilently);
-    loadTwins(getAccessTokenSilently);
-  }, [loadModels, loadTwins, getAccessTokenSilently]);
+    if (currentConnection) {
+      loadModels(getAccessTokenSilently, getTokenWithPopup);
+      loadTwins(getAccessTokenSilently, getTokenWithPopup);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentConnection, loadModels, loadTwins, getAccessTokenSilently]);
 
   const isLoading = modelsLoading || twinsLoading;
   const error = modelsError || twinsError;
@@ -325,8 +341,8 @@ export function ModelSidebar() {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        loadModels(getAccessTokenSilently);
-                        loadTwins(getAccessTokenSilently);
+                        loadModels(getAccessTokenSilently, getTokenWithPopup);
+                        loadTwins(getAccessTokenSilently, getTokenWithPopup);
                       }}
                       className="mt-2"
                     >
