@@ -198,3 +198,113 @@ export const formatTwinForDisplay = (twin: BasicDigitalTwin): BasicDigitalTwin =
   // The displayName should be computed in the UI components when needed using getModelDisplayName
   return twin;
 };
+
+/**
+ * Relationship definition from DTDL model
+ */
+export interface RelationshipDefinition {
+  name: string;
+  displayName?: string | Record<string, string>;
+  target?: string; // Target model ID (if constrained)
+  description?: string | Record<string, string>;
+  properties?: Array<{
+    name: string;
+    displayName?: string | Record<string, string>;
+    schema?: string;
+  }>;
+}
+
+interface DTDLRelationshipContent {
+  "@type": "Relationship" | string[];
+  name: string;
+  displayName?: string | Record<string, string>;
+  description?: string | Record<string, string>;
+  target?: string;
+  properties?: Array<{
+    name: string;
+    displayName?: string | Record<string, string>;
+    schema?: string;
+  }>;
+}
+
+/**
+ * Get relationship definitions from a model
+ * @param modelId - DTDL model identifier
+ * @returns Array of relationship definitions including inherited ones
+ */
+export const getModelRelationshipDefinitions = (
+  modelId: string
+): RelationshipDefinition[] => {
+  const models = useModelsStore.getState().models;
+  const model = models.find((m) => m.id === modelId);
+  if (!model || !model.model) return [];
+
+  const relationships: RelationshipDefinition[] = [];
+  const processedNames = new Set<string>();
+
+  // Helper to process a model and its base models
+  const processModel = (currentModelId: string) => {
+    const currentModel = models.find((m) => m.id === currentModelId);
+    if (!currentModel || !currentModel.model) return;
+
+    const dtdlModel = currentModel.model;
+    const contents = dtdlModel.contents;
+
+    if (Array.isArray(contents)) {
+      contents.forEach((content) => {
+        if (
+          content &&
+          typeof content === "object" &&
+          "@type" in content
+        ) {
+          const contentType = (content as { "@type": string | string[] })["@type"];
+          const isRelationship =
+            contentType === "Relationship" ||
+            (Array.isArray(contentType) && contentType.includes("Relationship"));
+
+          if (isRelationship) {
+            const relContent = content as DTDLRelationshipContent;
+            if (!processedNames.has(relContent.name)) {
+              processedNames.add(relContent.name);
+              relationships.push({
+                name: relContent.name,
+                displayName: relContent.displayName,
+                target: relContent.target,
+                description: relContent.description,
+                properties: relContent.properties,
+              });
+            }
+          }
+        }
+      });
+    }
+
+    // Process base models (extends)
+    if (dtdlModel.extends) {
+      const extendsList = Array.isArray(dtdlModel.extends)
+        ? dtdlModel.extends
+        : [dtdlModel.extends];
+
+      extendsList.forEach((ext) => {
+        const extId = typeof ext === "string" ? ext : (ext as { "@id": string })["@id"];
+        if (extId) processModel(extId);
+      });
+    }
+  };
+
+  processModel(modelId);
+  return relationships;
+};
+
+/**
+ * Get display name for a relationship definition
+ */
+export const getRelationshipDisplayName = (
+  rel: RelationshipDefinition
+): string => {
+  if (rel.displayName) {
+    if (typeof rel.displayName === "string") return rel.displayName;
+    return rel.displayName.en || Object.values(rel.displayName)[0] || rel.name;
+  }
+  return rel.name;
+};

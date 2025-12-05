@@ -1,6 +1,8 @@
 import React from "react";
 import { GitBranch, Database, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useInspectorStore } from "@/stores/inspectorStore";
 import type { BasicRelationship } from "@/types";
 
 interface RelationshipInspectorProps {
@@ -8,19 +10,40 @@ interface RelationshipInspectorProps {
 }
 
 export function RelationshipInspector({
-  relationshipId,
+  relationshipId: _relationshipId,
 }: RelationshipInspectorProps): React.JSX.Element {
-  // In a real app, this would fetch the relationship data from the API
-  // For now, we'll simulate loading the relationship data
-  const relationship: BasicRelationship = {
-    $relationshipId: relationshipId,
-    $sourceId: "Room_101A",
-    $targetId: "Sensor_T_101A_1",
-    $relationshipName: "contains",
-    installedDate: "2024-01-10",
-    maintenanceSchedule: "monthly",
-    status: "active",
+  const selectedItem = useInspectorStore((state) => state.selectedItem);
+  const selectItem = useInspectorStore((state) => state.selectItem);
+
+  // Get relationship data from the inspector store's selected item
+  // The data is passed when the relationship is selected (e.g., from query results or TwinInspector)
+  const relationship: BasicRelationship | null =
+    selectedItem?.type === "relationship" && selectedItem.data
+      ? (selectedItem.data as BasicRelationship)
+      : null;
+
+  if (!relationship) {
+    return (
+      <div className="text-sm text-muted-foreground p-4">
+        <p>No relationship data available.</p>
+        <p className="text-xs mt-2">
+          Select a relationship from query results or a twin's relationships to inspect it.
+        </p>
+      </div>
+    );
+  }
+
+  const handleNavigateToTwin = (twinId: string) => {
+    selectItem({
+      type: "twin",
+      id: twinId,
+    });
   };
+
+  // Extract custom properties (non-$ prefixed)
+  const customProperties = Object.entries(relationship).filter(
+    ([key]) => !key.startsWith("$")
+  );
 
   return (
     <div className="space-y-4">
@@ -33,7 +56,7 @@ export function RelationshipInspector({
         <div className="space-y-2">
           <div className="flex justify-between items-start text-sm">
             <span className="text-muted-foreground">Relationship ID</span>
-            <code className="font-mono text-xs bg-muted px-2 py-1 rounded">
+            <code className="font-mono text-xs bg-muted px-2 py-1 rounded select-all">
               {relationship.$relationshipId}
             </code>
           </div>
@@ -56,49 +79,56 @@ export function RelationshipInspector({
           <div className="flex items-center justify-between p-2 border rounded-md">
             <div className="text-sm">
               <div className="font-medium">Source Twin</div>
-              <div className="text-xs text-muted-foreground">
+              <Button
+                variant="link"
+                size="sm"
+                className="h-auto p-0 text-xs text-muted-foreground hover:text-primary"
+                onClick={() => handleNavigateToTwin(relationship.$sourceId)}
+              >
                 {relationship.$sourceId}
-              </div>
+              </Button>
             </div>
             <div className="mx-2 text-muted-foreground">→</div>
             <div className="text-sm text-right">
               <div className="font-medium">Target Twin</div>
-              <div className="text-xs text-muted-foreground">
+              <Button
+                variant="link"
+                size="sm"
+                className="h-auto p-0 text-xs text-muted-foreground hover:text-primary"
+                onClick={() => handleNavigateToTwin(relationship.$targetId)}
+              >
                 {relationship.$targetId}
-              </div>
+              </Button>
             </div>
           </div>
         </div>
       </div>
 
       {/* Properties */}
-      {Object.keys(relationship).filter((k) => !k.startsWith("$")).length >
-        0 && (
+      {customProperties.length > 0 && (
         <div className="space-y-2">
           <h3 className="font-semibold text-sm flex items-center gap-2">
             <Tag className="w-4 h-4" />
             Properties
           </h3>
           <div className="space-y-2">
-            {Object.entries(relationship)
-              .filter(([key]) => !key.startsWith("$"))
-              .map(([key, value]) => (
-                <div
-                  key={key}
-                  className="flex justify-between items-start text-sm"
-                >
-                  <span className="text-muted-foreground min-w-0 flex-1">
-                    {key}
-                  </span>
-                  <div className="ml-2 text-right">
-                    <div className="font-mono text-xs break-all">
-                      {typeof value === "object" && value !== null
-                        ? JSON.stringify(value)
-                        : String(value ?? "")}
-                    </div>
+            {customProperties.map(([key, value]) => (
+              <div
+                key={key}
+                className="flex justify-between items-start text-sm"
+              >
+                <span className="text-muted-foreground min-w-0 flex-1">
+                  {key}
+                </span>
+                <div className="ml-2 text-right">
+                  <div className="font-mono text-xs break-all">
+                    {typeof value === "object" && value !== null
+                      ? JSON.stringify(value)
+                      : String(value ?? "")}
                   </div>
                 </div>
-              ))}
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -106,10 +136,10 @@ export function RelationshipInspector({
       {/* Quick Actions */}
       <div className="pt-4 border-t">
         <div className="text-xs text-muted-foreground space-y-1">
-          <div>Select relationship in query results to inspect</div>
-          <div>Navigate to connected twins: Coming soon</div>
+          <div>Click twin IDs to navigate</div>
         </div>
       </div>
     </div>
   );
 }
+
