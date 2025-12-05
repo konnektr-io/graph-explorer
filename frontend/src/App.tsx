@@ -5,8 +5,8 @@ import { GraphHeader } from "@/components/layout/GraphHeader";
 import { ModelSidebar } from "@/components/layout/ModelSidebar";
 import { MainContent } from "@/components/layout/MainContent";
 import { Inspector } from "@/components/inspector/Inspector";
-import { StatusBar } from "@/components/layout/StatusBar";
-import { ConnectionStatusBanner } from "@/components/ConnectionStatusBanner";
+// import { StatusBar } from "@/components/layout/StatusBar";
+// import { ConnectionStatusBanner } from "@/components/layout/ConnectionStatusBanner";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useConnectionStore } from "@/stores/connectionStore";
 import { CookieConsent } from "@/components/cookie-consent";
@@ -90,7 +90,7 @@ function App() {
           <GraphHeader />
 
           {/* Connection Status Banner */}
-          <ConnectionStatusBanner />
+          {/* <ConnectionStatusBanner /> */}
 
           {/* Main Content Area with Resizable Panels */}
           <div className="flex-1 overflow-hidden">
@@ -141,7 +141,7 @@ function App() {
           </div>
 
           {/* Status Bar */}
-          <StatusBar />
+          {/* <StatusBar /> */}
 
           {/* Cookie Consent Popup */}
           <CookieConsent

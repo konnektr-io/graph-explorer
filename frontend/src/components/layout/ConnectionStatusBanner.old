@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 
 export function ConnectionStatusBanner() {
   const {
-    isConnected,
+    // isConnected,
     getCurrentConnection,
     dismissBanner,
     isBannerDismissed,
