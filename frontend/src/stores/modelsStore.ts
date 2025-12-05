@@ -220,6 +220,31 @@ export const useModelsStore = create<ModelsState>()(
 
         return modelId;
       } catch (error) {
+        // Heuristic: Check if error is actually a success response (JSON array)
+        if (error instanceof Error && error.message) {
+          try {
+            const parsed = JSON.parse(error.message);
+            // If it looks like a model definition (array with ID), treat as success
+            if (
+              Array.isArray(parsed) &&
+              parsed.length > 0 &&
+              (parsed[0]["@id"] || parsed[0]["id"])
+            ) {
+              const newModelData = toExtendedModel(
+                parsed[0] as DigitalTwinsModelData
+              );
+              set((state) => ({
+                models: [...state.models, newModelData],
+                isLoading: false,
+              }));
+              await get().validateModel(model["@id"]);
+              return model["@id"];
+            }
+          } catch (e) {
+            // Ignore parse error, proceed to handle as real error
+          }
+        }
+
         set({
           error:
             error instanceof Error ? error.message : "Failed to upload model",
@@ -253,6 +278,33 @@ export const useModelsStore = create<ModelsState>()(
 
         return result as DigitalTwinsModelData[];
       } catch (error) {
+        // Heuristic: Check if error is actually a success response (JSON array)
+        if (error instanceof Error && error.message) {
+          try {
+            const parsed = JSON.parse(error.message);
+            // If it looks like a model definition (array with ID), treat as success
+            if (
+              Array.isArray(parsed) &&
+              parsed.length > 0 &&
+              (parsed[0]["@id"] || parsed[0]["id"])
+            ) {
+              const modelDataList = parsed.map((m) =>
+                toExtendedModel(m as DigitalTwinsModelData)
+              );
+              set((state) => ({
+                models: [...state.models, ...modelDataList],
+                isLoading: false,
+              }));
+              for (const modelData of modelDataList) {
+                await get().validateModel(modelData.id);
+              }
+              return parsed as DigitalTwinsModelData[];
+            }
+          } catch (e) {
+            // Ignore parse error, proceed to handle as real error
+          }
+        }
+
         set({
           error:
             error instanceof Error ? error.message : "Failed to upload models",

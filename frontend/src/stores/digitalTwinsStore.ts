@@ -206,9 +206,11 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
           twinData.$dtId ||
           `twin-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+        const payload = { ...twinData, $dtId: twinId };
+
         const response = await client.upsertDigitalTwin(
           twinId,
-          JSON.stringify(twinData)
+          JSON.stringify(payload)
         );
 
         const newTwin = response as BasicDigitalTwin;

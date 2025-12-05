@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Upload, FileJson, Type } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +31,7 @@ export function ImportModelsDialog({
 }: ImportModelsDialogProps) {
   const [mode, setMode] = useState<ImportMode>(initialMode);
   const [jsonContent, setJsonContent] = useState("");
-  const [files, setFiles] = useState<FileList | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [isImporting, setIsImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -39,6 +39,17 @@ export function ImportModelsDialog({
 
   const { uploadModel, uploadModels } = useModelsStore();
   const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth0();
+
+  // Reset state when dialog opens
+  useEffect(() => {
+    if (open) {
+      setMode(initialMode);
+      setJsonContent("");
+      setFiles([]);
+      setError(null);
+      setIsImporting(false);
+    }
+  }, [open, initialMode]);
 
   // Helper to ensure auth tokens are passed
   const getAuth = () => ({
@@ -65,9 +76,22 @@ export function ImportModelsDialog({
     setIsDragging(false);
     
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      // Filter for JSON files only if needed, or just take them
-      setFiles(e.dataTransfer.files);
+      const newFiles = Array.from(e.dataTransfer.files);
+      setFiles((prev) => [...prev, ...newFiles]);
     }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files);
+      setFiles((prev) => [...prev, ...newFiles]);
+      // Reset input so same files can be selected again if needed
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const removeFile = (indexToRemove: number) => {
+    setFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
   };
 
   const handleImport = async () => {
@@ -91,12 +115,12 @@ export function ImportModelsDialog({
           throw new Error("Invalid JSON syntax");
         }
       } else {
-        if (!files || files.length === 0) {
+        if (files.length === 0) {
           throw new Error("Please select files to upload");
         }
 
         // Read all files
-        const filePromises = Array.from(files).map((file) => {
+        const filePromises = files.map((file) => {
           return new Promise<any>((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -143,10 +167,6 @@ export function ImportModelsDialog({
       }
 
       onOpenChange(false);
-      // Reset state
-      setJsonContent("");
-      setFiles(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to import models");
     } finally {
@@ -226,17 +246,30 @@ export function ImportModelsDialog({
                   accept=".json"
                   multiple
                   className="hidden"
-                  onChange={(e) => setFiles(e.target.files)}
+                  onChange={handleFileSelect}
                 />
               </div>
-              {files && files.length > 0 && (
-                <div className="text-sm border rounded p-2 bg-muted/50">
-                  <div className="font-semibold mb-1">Selected files:</div>
-                  <ul className="list-disc list-inside text-muted-foreground">
-                    {Array.from(files).slice(0, 5).map((f) => (
-                      <li key={f.name} className="truncate">{f.name}</li>
+              {files.length > 0 && (
+                <div className="text-sm border rounded p-2 bg-muted/50 max-h-[150px] overflow-y-auto">
+                  <div className="font-semibold mb-1 sticky top-0 bg-muted/50 backdrop-blur-sm">Selected files:</div>
+                  <ul className="space-y-1">
+                    {files.map((f, i) => (
+                      <li key={`${f.name}-${i}`} className="flex items-center justify-between gap-2 p-1 hover:bg-background/50 rounded group">
+                        <span className="truncate text-muted-foreground">{f.name}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeFile(i);
+                          }}
+                        >
+                          <span className="sr-only">Remove</span>
+                          <span aria-hidden="true">&times;</span>
+                        </Button>
+                      </li>
                     ))}
-                    {files.length > 5 && <li>...and {files.length - 5} more</li>}
                   </ul>
                 </div>
               )}

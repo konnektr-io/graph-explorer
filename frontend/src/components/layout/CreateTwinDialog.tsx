@@ -12,7 +12,8 @@ import {
 } from "@/components/ui/dialog";
 import { useDigitalTwinsStore } from "@/stores/digitalTwinsStore";
 import { useInspectorStore } from "@/stores/inspectorStore";
-import { getModelDisplayName } from "@/utils/dtdlHelpers"; // Assuming this exists as it is used in ModelSidebar
+import { getModelDisplayName } from "@/utils/dtdlHelpers";
+import { useAuth0 } from "@auth0/auth0-react";
 
 // Checking ModelSidebar imports, I don't see toast. I'll stick to store actions and local state.
 
@@ -33,6 +34,7 @@ export function CreateTwinDialog({
 
   const { createTwin } = useDigitalTwinsStore();
   const { selectItem } = useInspectorStore();
+  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth0();
 
   const handleCreate = async () => {
     setIsCreating(true);
@@ -40,15 +42,22 @@ export function CreateTwinDialog({
     try {
       const idToUse = twinId.trim() || undefined; // If empty, store might auto-generate or we allow it
       
-      const newTwinId = await createTwin({
-        $dtId: idToUse || "", // If store handles empty string as "auto-generate", good. If not, we might need to handle it.
-        // DigitalTwinsStore createTwin implementation:
-        // const twinId = twinData.$dtId || `twin-${Date.now()}...`
-        // So empty string is fine.
-        $metadata: {
-          $model: modelId,
+      const newTwinId = await createTwin(
+        {
+          $dtId: idToUse || "",
+          $metadata: {
+            $model: modelId,
+          },
         },
-      });
+        {
+          getAccessTokenSilently,
+          getAccessTokenWithPopup: async (options) => {
+            const token = await getAccessTokenWithPopup(options);
+            if (!token) throw new Error("Failed to get token with popup");
+            return token;
+          },
+        }
+      );
 
       // Select the new twin in the inspector
       // Assuming inspector store supports 'twin' type

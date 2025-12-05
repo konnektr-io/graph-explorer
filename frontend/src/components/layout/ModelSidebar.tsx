@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Plus, Layers, Trash2, Copy } from "lucide-react";
+import { Search, Plus, Layers, Trash2, PlusSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -133,7 +133,7 @@ function buildModelTree(
             }}
             title="Create twin from this model"
           >
-            <Copy className="w-3 h-3" />
+            <PlusSquare className="w-3 h-3" />
           </div>
           <div
             role="button"
@@ -235,7 +235,10 @@ export function ModelSidebar() {
 
     setIsDeleting(true);
     try {
-      await deleteModel(modelToDelete);
+      await deleteModel(modelToDelete, {
+        getAccessTokenSilently,
+        getAccessTokenWithPopup: getTokenWithPopup,
+      });
       setDeleteDialogOpen(false);
       setModelToDelete(null);
     } catch (err) {
