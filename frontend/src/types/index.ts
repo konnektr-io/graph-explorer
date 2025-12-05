@@ -32,3 +32,15 @@ export type {
   DtdlObjectField,
 } from "./Dtdl";
 export type { SimpleProperty } from "./DtdlSimpleProperty";
+
+/**
+ * Callbacks for retrieving access tokens
+ */
+export interface AuthCallbacks {
+  getAccessTokenSilently?: (options?: {
+    authorizationParams?: { audience?: string; scope?: string };
+  }) => Promise<string>;
+  getAccessTokenWithPopup?: (options?: {
+    authorizationParams?: { audience?: string; scope?: string };
+  }) => Promise<string>;
+}

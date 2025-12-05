@@ -19,7 +19,7 @@ export function setupProxy(app: Connect.Server): void {
   const proxy = createProxyMiddleware({
     target: "https://localhost/", // Will be overridden by router
     changeOrigin: true,
-    secure: true,
+    secure: false,
     logger: console,
     pathFilter: "/api/proxy",
     pathRewrite: (path: string) => {

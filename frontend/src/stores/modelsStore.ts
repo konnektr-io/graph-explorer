@@ -6,6 +6,7 @@ import type {
   DigitalTwinsModelDataExtended,
   DtdlInterface,
   DigitalTwinsModelData,
+  AuthCallbacks,
 } from "@/types";
 import { digitalTwinsClientFactory } from "@/services/digitalTwinsClientFactory";
 import { useConnectionStore } from "./connectionStore";
@@ -16,17 +17,24 @@ import { useConnectionStore } from "./connectionStore";
  *
  * Note: This function is now async to support MSAL initialization
  */
-const getClient = async (): Promise<DigitalTwinsClient> => {
-  const { getCurrentConnection, isConnected } = useConnectionStore.getState();
+// Helper to get authorized client
+const getClient = async (
+  getAccessTokenSilently?: AuthCallbacks["getAccessTokenSilently"],
+  getAccessTokenWithPopup?: AuthCallbacks["getAccessTokenWithPopup"]
+): Promise<DigitalTwinsClient> => {
+  const { getCurrentConnection } = useConnectionStore.getState();
   const connection = getCurrentConnection();
-  if (!connection || !isConnected) {
+  if (!connection) {
     throw new Error(
       "Not connected to Digital Twins instance. Please configure connection."
     );
   }
 
-  // Use the new connection-based factory with auth support
-  return await digitalTwinsClientFactory(connection);
+  return await digitalTwinsClientFactory(
+    connection,
+    getAccessTokenSilently,
+    getAccessTokenWithPopup
+  );
 };
 
 export interface ModelsState {
@@ -50,19 +58,25 @@ export interface ModelsState {
 
   // Actions - Models
   loadModels: (
-    getAccessTokenSilently?: (options?: {
-      authorizationParams?: { audience?: string; scope?: string };
-    }) => Promise<string>,
-    getAccessTokenWithPopup?: (options?: {
-      authorizationParams?: { audience?: string; scope?: string };
-    }) => Promise<string>
+    getAccessTokenSilently?: AuthCallbacks["getAccessTokenSilently"],
+    getAccessTokenWithPopup?: AuthCallbacks["getAccessTokenWithPopup"]
   ) => Promise<void>;
-  getModelById: (modelId: string) => Promise<DigitalTwinsModelData>;
-  uploadModel: (model: DtdlInterface) => Promise<string>;
-  uploadModels: (models: DtdlInterface[]) => Promise<DigitalTwinsModelData[]>;
-  updateModel: (modelId: string, model: DtdlInterface) => Promise<void>;
-  deleteModel: (modelId: string) => Promise<void>;
-  decommissionModel: (modelId: string) => Promise<void>;
+  getModelById: (
+    modelId: string,
+    auth?: AuthCallbacks
+  ) => Promise<DigitalTwinsModelData>;
+  uploadModel: (model: DtdlInterface, auth?: AuthCallbacks) => Promise<string>;
+  uploadModels: (
+    models: DtdlInterface[],
+    auth?: AuthCallbacks
+  ) => Promise<DigitalTwinsModelData[]>;
+  updateModel: (
+    modelId: string,
+    model: DtdlInterface,
+    auth?: AuthCallbacks
+  ) => Promise<void>;
+  deleteModel: (modelId: string, auth?: AuthCallbacks) => Promise<void>;
+  decommissionModel: (modelId: string, auth?: AuthCallbacks) => Promise<void>;
   getModel: (modelId: string) => DigitalTwinsModelDataExtended | undefined;
   getModelsByType: (modelType: string) => DigitalTwinsModelDataExtended[];
 
@@ -118,16 +132,7 @@ export const useModelsStore = create<ModelsState>()(
     loadModels: async (getAccessTokenSilently, getAccessTokenWithPopup) => {
       set({ isLoading: true, error: null });
       try {
-        const { getCurrentConnection } = useConnectionStore.getState();
-        const connection = getCurrentConnection();
-        if (!connection) {
-          throw new Error(
-            "No connection selected. Please select a connection."
-          );
-        }
-
-        const client = await digitalTwinsClientFactory(
-          connection,
+        const client = await getClient(
           getAccessTokenSilently,
           getAccessTokenWithPopup
         );
@@ -171,15 +176,18 @@ export const useModelsStore = create<ModelsState>()(
       }
     },
 
-    getModelById: async (modelId) => {
-      const client = await getClient();
+    getModelById: async (modelId, auth) => {
+      const client = await getClient(
+        auth?.getAccessTokenSilently,
+        auth?.getAccessTokenWithPopup
+      );
       const model = await client.getModel(modelId, {
         includeModelDefinition: true,
       });
       return model as DigitalTwinsModelData;
     },
 
-    uploadModel: async (model) => {
+    uploadModel: async (model, auth) => {
       set({ isLoading: true, error: null });
       try {
         const modelId = model["@id"];
@@ -193,7 +201,10 @@ export const useModelsStore = create<ModelsState>()(
           throw new Error(`Model with ID ${modelId} already exists`);
         }
 
-        const client = await getClient();
+        const client = await getClient(
+          auth?.getAccessTokenSilently,
+          auth?.getAccessTokenWithPopup
+        );
         const result = await client.createModels([model]);
         const newModelData = toExtendedModel(
           result[0] as DigitalTwinsModelData
@@ -218,10 +229,13 @@ export const useModelsStore = create<ModelsState>()(
       }
     },
 
-    uploadModels: async (models) => {
+    uploadModels: async (models, auth) => {
       set({ isLoading: true, error: null });
       try {
-        const client = await getClient();
+        const client = await getClient(
+          auth?.getAccessTokenSilently,
+          auth?.getAccessTokenWithPopup
+        );
         const result = await client.createModels(models);
         const modelDataList = result.map((m) =>
           toExtendedModel(m as DigitalTwinsModelData)
@@ -248,14 +262,13 @@ export const useModelsStore = create<ModelsState>()(
       }
     },
 
-    updateModel: async (modelId, model) => {
+    updateModel: async (modelId, model, auth) => {
       set({ isLoading: true, error: null });
       try {
-        // In Azure Digital Twins, models are immutable once created
-        // To update a model, you need to delete the old one and create a new one
-        // This should only be done if no twins are using the model
-
-        const client = await getClient();
+        const client = await getClient(
+          auth?.getAccessTokenSilently,
+          auth?.getAccessTokenWithPopup
+        );
 
         // Delete the old model
         await client.deleteModel(modelId);
@@ -285,10 +298,13 @@ export const useModelsStore = create<ModelsState>()(
       }
     },
 
-    deleteModel: async (modelId) => {
+    deleteModel: async (modelId, auth) => {
       set({ isLoading: true, error: null });
       try {
-        const client = await getClient();
+        const client = await getClient(
+          auth?.getAccessTokenSilently,
+          auth?.getAccessTokenWithPopup
+        );
         await client.deleteModel(modelId);
 
         set((state) => ({
@@ -310,10 +326,13 @@ export const useModelsStore = create<ModelsState>()(
       }
     },
 
-    decommissionModel: async (modelId) => {
+    decommissionModel: async (modelId, auth) => {
       set({ isLoading: true, error: null });
       try {
-        const client = await getClient();
+        const client = await getClient(
+          auth?.getAccessTokenSilently,
+          auth?.getAccessTokenWithPopup
+        );
         await client.decomissionModel(modelId);
 
         set((state) => ({

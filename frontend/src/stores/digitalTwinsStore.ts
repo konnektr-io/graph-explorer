@@ -3,7 +3,7 @@ import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import type { DigitalTwinsClient } from "@azure/digital-twins-core";
 import type { Operation } from "fast-json-patch";
-import type { BasicDigitalTwin, BasicRelationship } from "@/types";
+import type { BasicDigitalTwin, BasicRelationship, AuthCallbacks } from "@/types";
 import { digitalTwinsClientFactory } from "@/services/digitalTwinsClientFactory";
 import { useConnectionStore } from "./connectionStore";
 import {
@@ -22,17 +22,24 @@ import {
  *
  * Note: This function is now async to support MSAL initialization
  */
-const getClient = async (): Promise<DigitalTwinsClient> => {
-  const { getCurrentConnection, isConnected } = useConnectionStore.getState();
+const getClient = async (
+  getAccessTokenSilently?: AuthCallbacks["getAccessTokenSilently"],
+  getAccessTokenWithPopup?: AuthCallbacks["getAccessTokenWithPopup"]
+): Promise<DigitalTwinsClient> => {
+  const { getCurrentConnection } = useConnectionStore.getState();
   const connection = getCurrentConnection();
-  if (!connection || !isConnected) {
+  if (!connection) {
     throw new Error(
       "Not connected to Digital Twins instance. Please configure connection."
     );
   }
 
   // Use the new connection-based factory with auth support
-  return await digitalTwinsClientFactory(connection);
+  return await digitalTwinsClientFactory(
+    connection,
+    getAccessTokenSilently,
+    getAccessTokenWithPopup
+  );
 };
 
 export interface DigitalTwinsState {
@@ -50,55 +57,56 @@ export interface DigitalTwinsState {
 
   // Actions - Twins
   loadTwins: (
-    getAccessTokenSilently?: (options?: {
-      authorizationParams?: { audience?: string; scope?: string };
-    }) => Promise<string>,
-    getAccessTokenWithPopup?: (options?: {
-      authorizationParams?: { audience?: string; scope?: string };
-    }) => Promise<string>
+    getAccessTokenSilently?: AuthCallbacks["getAccessTokenSilently"],
+    getAccessTokenWithPopup?: AuthCallbacks["getAccessTokenWithPopup"]
   ) => Promise<void>;
-  createTwin: (twin: BasicDigitalTwin) => Promise<string>;
+  createTwin: (
+    twin: BasicDigitalTwin,
+    auth?: AuthCallbacks
+  ) => Promise<string>;
   updateTwin: (
     twinId: string,
-    updates: Partial<BasicDigitalTwin>
+    updates: Partial<BasicDigitalTwin>,
+    auth?: AuthCallbacks
   ) => Promise<void>;
-  deleteTwin: (twinId: string) => Promise<void>;
+  deleteTwin: (twinId: string, auth?: AuthCallbacks) => Promise<void>;
   getTwin: (twinId: string) => BasicDigitalTwin | undefined;
-  getTwinById: (twinId: string) => Promise<BasicDigitalTwin>;
+  getTwinById: (
+    twinId: string,
+    auth?: AuthCallbacks
+  ) => Promise<BasicDigitalTwin>;
   getTwinsByModel: (modelId: string) => BasicDigitalTwin[];
   queryTwins: (
     query: string,
-    getAccessTokenSilently?: (options?: {
-      authorizationParams?: { audience?: string; scope?: string };
-    }) => Promise<string>,
-    getAccessTokenWithPopup?: (options?: {
-      authorizationParams?: { audience?: string; scope?: string };
-    }) => Promise<string>
+    getAccessTokenSilently?: AuthCallbacks["getAccessTokenSilently"],
+    getAccessTokenWithPopup?: AuthCallbacks["getAccessTokenWithPopup"]
   ) => Promise<QueryTwinsResult>;
 
   // Actions - Relationships
   loadRelationships: (
     twinId?: string,
-    getAccessTokenSilently?: (options?: {
-      authorizationParams?: { audience?: string; scope?: string };
-    }) => Promise<string>,
-    getAccessTokenWithPopup?: (options?: {
-      authorizationParams?: { audience?: string; scope?: string };
-    }) => Promise<string>
+    getAccessTokenSilently?: AuthCallbacks["getAccessTokenSilently"],
+    getAccessTokenWithPopup?: AuthCallbacks["getAccessTokenWithPopup"]
   ) => Promise<void>;
-  createRelationship: (relationship: BasicRelationship) => Promise<string>;
+  createRelationship: (
+    relationship: BasicRelationship,
+    auth?: AuthCallbacks
+  ) => Promise<string>;
   updateRelationship: (
     sourceTwinId: string,
     relationshipId: string,
-    updates: Operation[]
+    updates: Operation[],
+    auth?: AuthCallbacks
   ) => Promise<void>;
   deleteRelationship: (
     sourceTwinId: string,
-    relationshipId: string
+    relationshipId: string,
+    auth?: AuthCallbacks
   ) => Promise<void>;
   getRelationship: (
     sourceTwinId: string,
-    relationshipId: string
+    relationshipId: string,
+    auth?: AuthCallbacks
   ) => Promise<BasicRelationship>;
   getRelationshipsForTwin: (twinId: string) => {
     outgoing: BasicRelationship[];
@@ -106,7 +114,8 @@ export interface DigitalTwinsState {
   };
   queryRelationships: (
     twinId: string,
-    type?: string
+    type?: string,
+    auth?: AuthCallbacks
   ) => Promise<BasicRelationship[]>;
 
   // Actions - Selection & Filtering
@@ -119,12 +128,14 @@ export interface DigitalTwinsState {
   updateTwinProperty: (
     twinId: string,
     propertyName: string,
-    value: unknown
+    value: unknown,
+    auth?: AuthCallbacks
   ) => Promise<void>;
   updateTwinComponent: (
     twinId: string,
     componentName: string,
-    componentData: Record<string, unknown>
+    componentData: Record<string, unknown>,
+    auth?: AuthCallbacks
   ) => Promise<void>;
 
   // Actions - Utility
@@ -143,12 +154,13 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
     filter: {},
 
     // Twins actions
-    loadTwins: async (getAccessTokenSilently) => {
+    loadTwins: async (getAccessTokenSilently, getAccessTokenWithPopup) => {
       set({ isLoading: true, error: null });
       try {
         const queryResult = await get().queryTwins(
           QUERY_ALL_TWINS,
-          getAccessTokenSilently
+          getAccessTokenSilently,
+          getAccessTokenWithPopup
         );
 
         set({
@@ -181,10 +193,13 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
       }
     },
 
-    createTwin: async (twinData) => {
+    createTwin: async (twinData, auth) => {
       set({ isLoading: true, error: null });
       try {
-        const client = await getClient();
+        const client = await getClient(
+          auth?.getAccessTokenSilently,
+          auth?.getAccessTokenWithPopup
+        );
 
         // Generate a unique ID if not provided
         const twinId =
@@ -214,10 +229,13 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
       }
     },
 
-    updateTwin: async (twinId, updates) => {
+    updateTwin: async (twinId, updates, auth) => {
       set({ isLoading: true, error: null });
       try {
-        const client = await getClient();
+        const client = await getClient(
+          auth?.getAccessTokenSilently,
+          auth?.getAccessTokenWithPopup
+        );
 
         // Convert updates to JSON Patch operations
         const patch: Operation[] = Object.entries(updates).map(
@@ -234,7 +252,7 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
         );
 
         // Refresh the twin from the server
-        const updatedTwin = await get().getTwinById(twinId);
+        const updatedTwin = await get().getTwinById(twinId, auth);
 
         set((state) => ({
           twins: state.twins.map((twin) =>
@@ -252,13 +270,16 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
       }
     },
 
-    deleteTwin: async (twinId) => {
+    deleteTwin: async (twinId, auth) => {
       set({ isLoading: true, error: null });
       try {
-        const client = await getClient();
+        const client = await getClient(
+          auth?.getAccessTokenSilently,
+          auth?.getAccessTokenWithPopup
+        );
 
         // Delete all relationships first
-        const rels = await get().queryRelationships(twinId, REL_TYPE_ALL);
+        const rels = await get().queryRelationships(twinId, REL_TYPE_ALL, auth);
         for (const rel of rels) {
           await client.deleteRelationship(rel.$sourceId, rel.$relationshipId);
         }
@@ -289,8 +310,11 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
       return get().twins.find((twin) => twin.$dtId === twinId);
     },
 
-    getTwinById: async (twinId) => {
-      const client = await getClient();
+    getTwinById: async (twinId, auth) => {
+      const client = await getClient(
+        auth?.getAccessTokenSilently,
+        auth?.getAccessTokenWithPopup
+      );
       const response = await client.getDigitalTwin(twinId);
       return response as BasicDigitalTwin;
     },
@@ -367,10 +391,13 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
       }
     },
 
-    createRelationship: async (relationshipData) => {
+    createRelationship: async (relationshipData, auth) => {
       set({ isLoading: true, error: null });
       try {
-        const client = await getClient();
+        const client = await getClient(
+          auth?.getAccessTokenSilently,
+          auth?.getAccessTokenWithPopup
+        );
 
         const {
           $sourceId,
@@ -414,10 +441,13 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
       }
     },
 
-    updateRelationship: async (sourceTwinId, relationshipId, patch) => {
+    updateRelationship: async (sourceTwinId, relationshipId, patch, auth) => {
       set({ isLoading: true, error: null });
       try {
-        const client = await getClient();
+        const client = await getClient(
+          auth?.getAccessTokenSilently,
+          auth?.getAccessTokenWithPopup
+        );
 
         await client.updateRelationship(
           sourceTwinId,
@@ -428,7 +458,8 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
         // Refresh the relationship from the server
         const updatedRel = await get().getRelationship(
           sourceTwinId,
-          relationshipId
+          relationshipId,
+          auth
         );
 
         set((state) => ({
@@ -452,10 +483,13 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
       }
     },
 
-    deleteRelationship: async (sourceTwinId, relationshipId) => {
+    deleteRelationship: async (sourceTwinId, relationshipId, auth) => {
       set({ isLoading: true, error: null });
       try {
-        const client = await getClient();
+        const client = await getClient(
+          auth?.getAccessTokenSilently,
+          auth?.getAccessTokenWithPopup
+        );
         await client.deleteRelationship(sourceTwinId, relationshipId);
 
         set((state) => ({
@@ -480,8 +514,11 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
       }
     },
 
-    getRelationship: async (sourceTwinId, relationshipId) => {
-      const client = await getClient();
+    getRelationship: async (sourceTwinId, relationshipId, auth) => {
+      const client = await getClient(
+        auth?.getAccessTokenSilently,
+        auth?.getAccessTokenWithPopup
+      );
       const response = await client.getRelationship(
         sourceTwinId,
         relationshipId
@@ -489,8 +526,11 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
       return response as BasicRelationship;
     },
 
-    queryRelationships: async (twinId, type = REL_TYPE_OUTGOING) => {
-      const client = await getClient();
+    queryRelationships: async (twinId, type = REL_TYPE_OUTGOING, auth) => {
+      const client = await getClient(
+        auth?.getAccessTokenSilently,
+        auth?.getAccessTokenWithPopup
+      );
       const list: BasicRelationship[] = [];
 
       const query =
@@ -574,10 +614,10 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
     },
 
     // Property actions
-    updateTwinProperty: async (twinId, propertyName, value) => {
+    updateTwinProperty: async (twinId, propertyName, value, auth) => {
       set({ isLoading: true, error: null });
       try {
-        await get().updateTwin(twinId, { [propertyName]: value });
+        await get().updateTwin(twinId, { [propertyName]: value }, auth);
         set({ isLoading: false });
       } catch (error) {
         set({
@@ -591,10 +631,15 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
       }
     },
 
-    updateTwinComponent: async (twinId, componentName, componentData) => {
+    updateTwinComponent: async (
+      twinId,
+      componentName,
+      componentData,
+      auth
+    ) => {
       set({ isLoading: true, error: null });
       try {
-        await get().updateTwin(twinId, { [componentName]: componentData });
+        await get().updateTwin(twinId, { [componentName]: componentData }, auth);
         set({ isLoading: false });
       } catch (error) {
         set({
@@ -627,14 +672,4 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
 );
 
 // Subscribe to connection changes to auto-reload twins
-useConnectionStore.subscribe(
-  (state) => state.currentConnectionId,
-  (currentConnectionId, previousConnectionId) => {
-    // Only reload if connection actually changed and we have a connection
-    if (currentConnectionId && currentConnectionId !== previousConnectionId) {
-      console.log("Connection changed, reloading twins...");
-      const { loadTwins } = useDigitalTwinsStore.getState();
-      loadTwins();
-    }
-  }
-);
+

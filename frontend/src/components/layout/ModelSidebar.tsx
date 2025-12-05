@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Plus, Upload, Layers, Trash2, Copy } from "lucide-react";
+import { Search, Plus, Layers, Trash2, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -22,6 +22,8 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { useDigitalTwinsStore } from "@/stores/digitalTwinsStore";
 import { getModelDisplayName } from "@/utils/dtdlHelpers";
 import type { DigitalTwinsModelDataExtended } from "@/types";
+import { ImportModelsDialog } from "./ImportModelsDialog";
+import { CreateTwinDialog } from "./CreateTwinDialog";
 
 /**
  * Build a tree structure from models based on 'extends' relationships
@@ -160,11 +162,17 @@ function buildModelTree(
   return rootModels.map((model) => buildNode(model));
 }
 
+
+
 export function ModelSidebar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [modelToDelete, setModelToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importMode, setImportMode] = useState<"paste" | "upload">("paste");
+  const [createTwinDialogOpen, setCreateTwinDialogOpen] = useState(false);
+  const [createTwinModelId, setCreateTwinModelId] = useState<string | null>(null);
 
   const selectedItem = useInspectorStore((state) => state.selectedItem);
   const selectItem = useInspectorStore((state) => state.selectItem);
@@ -178,7 +186,6 @@ export function ModelSidebar() {
   const {
     twins,
     loadTwins,
-    isLoading: twinsLoading,
     error: twinsError,
   } = useDigitalTwinsStore();
 
@@ -200,13 +207,17 @@ export function ModelSidebar() {
   useEffect(() => {
     if (currentConnection) {
       loadModels(getAccessTokenSilently, getTokenWithPopup);
-      loadTwins(getAccessTokenSilently, getTokenWithPopup);
+      // Twins specific loading removed to prevent huge SELECT * query
+      // Only models are needed for this view primarily
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentConnection, loadModels, loadTwins, getAccessTokenSilently]);
+  }, [currentConnection, loadModels, getAccessTokenSilently]);
 
-  const isLoading = modelsLoading || twinsLoading;
-  const error = modelsError || twinsError;
+  // Only show full loading state if models are loading
+  // Twins loading is treated as background refresh if models are already there
+  const isLoading = modelsLoading; 
+  // Only block UI if models failed to load
+  const error = modelsError;
 
   const handleModelSelect = (item: TreeDataItem | undefined) => {
     if (item) {
@@ -235,8 +246,14 @@ export function ModelSidebar() {
   };
 
   const handleCreateTwin = (modelId: string) => {
-    // TODO: Implement create twin dialog
-    console.log("Create twin for model:", modelId);
+    setCreateTwinModelId(modelId);
+    setCreateTwinDialogOpen(true);
+  };
+
+  const handleImportClick = () => {
+    // Default to paste mode, but dialog opens and remembers or resets
+    setImportMode("paste"); 
+    setImportDialogOpen(true);
   };
 
   // Build tree structure from models
@@ -290,11 +307,15 @@ export function ModelSidebar() {
           <div className="flex items-center justify-between mb-2">
             <h2 className="font-semibold text-sm">Models</h2>
             <div className="flex gap-1">
-              <Button variant="ghost" size="sm" className="p-1.5">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="p-1.5"
+                onClick={handleImportClick}
+                title="Import Models"
+              >
                 <Plus className="w-3 h-3" />
-              </Button>
-              <Button variant="ghost" size="sm" className="p-1.5">
-                <Upload className="w-3 h-3" />
+                <span className="sr-only">Import Models</span>
               </Button>
             </div>
           </div>
@@ -316,6 +337,21 @@ export function ModelSidebar() {
         <div className="flex-1 overflow-hidden">
           <ScrollArea className="h-full">
             <div className="p-2">
+              {/* Twins Loading/Error Warning */}
+              {twinsError && !isLoading && (
+                <div className="mb-2 p-2 text-xs bg-muted text-muted-foreground rounded border border-border flex flex-col gap-1">
+                  <span className="font-semibold text-destructive">Failed to load twin counts</span>
+                  <span className="truncate" title={twinsError}>{twinsError}</span>
+                  <Button
+                      variant="link"
+                      className="h-auto p-0 text-xs self-start"
+                      onClick={() => loadTwins(getAccessTokenSilently, getTokenWithPopup)}
+                    >
+                      Retry
+                  </Button>
+                </div>
+              )}
+
               {/* Loading State */}
               {isLoading && !error && (
                 <div className="text-center text-muted-foreground text-sm py-8">
@@ -413,6 +449,25 @@ export function ModelSidebar() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Import Models Dialog */}
+      <ImportModelsDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        initialMode={importMode}
+      />
+
+      {/* Create Twin Dialog */}
+      {createTwinModelId && (
+        <CreateTwinDialog
+          open={createTwinDialogOpen}
+          onOpenChange={(open) => {
+            setCreateTwinDialogOpen(open);
+            if (!open) setCreateTwinModelId(null);
+          }}
+          modelId={createTwinModelId}
+        />
+      )}
     </>
   );
 }
