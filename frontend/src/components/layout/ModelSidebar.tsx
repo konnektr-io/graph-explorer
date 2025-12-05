@@ -30,23 +30,18 @@ import { CreateTwinDialog } from "./CreateTwinDialog";
  */
 function buildModelTree(
   models: DigitalTwinsModelDataExtended[],
-  twins: any[],
+  twinCounts: Record<string, number>,
   onDelete: (modelId: string) => void,
   onCreateTwin: (modelId: string) => void
 ): TreeDataItem[] {
   if (models.length === 0) return [];
 
   const modelMap = new Map<string, DigitalTwinsModelDataExtended>();
-  const twinCountMap = new Map<string, number>();
   const childrenMap = new Map<string, Set<string>>();
 
   // Build maps
   models.forEach((model) => {
     modelMap.set(model.id, model);
-    const count = twins.filter(
-      (twin) => twin.$metadata?.$model === model.id
-    ).length;
-    twinCountMap.set(model.id, count);
   });
 
   // Build parent-child relationships
@@ -91,7 +86,7 @@ function buildModelTree(
   function buildNode(model: DigitalTwinsModelDataExtended): TreeDataItem {
     const modelId = model.id;
     const displayName = getModelDisplayName(modelId);
-    const count = twinCountMap.get(modelId) || 0;
+    const count = twinCounts[modelId] || 0;
 
     // Get children from the map
     const childIds = childrenMap.get(modelId);
@@ -184,8 +179,8 @@ export function ModelSidebar() {
     error: modelsError,
   } = useModelsStore();
   const {
-    twins,
-    loadTwins,
+    twinCounts,
+    loadTwinCounts,
     error: twinsError,
   } = useDigitalTwinsStore();
 
@@ -207,11 +202,13 @@ export function ModelSidebar() {
   useEffect(() => {
     if (currentConnection) {
       loadModels(getAccessTokenSilently, getTokenWithPopup);
-      // Twins specific loading removed to prevent huge SELECT * query
-      // Only models are needed for this view primarily
+      loadTwinCounts({ 
+        getAccessTokenSilently, 
+        getAccessTokenWithPopup: getTokenWithPopup 
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentConnection, loadModels, getAccessTokenSilently]);
+  }, [currentConnection, loadModels, loadTwinCounts, getAccessTokenSilently]);
 
   // Only show full loading state if models are loading
   // Twins loading is treated as background refresh if models are already there
@@ -236,7 +233,6 @@ export function ModelSidebar() {
     setIsDeleting(true);
     try {
       await deleteModel(modelToDelete, {
-        getAccessTokenSilently,
         getAccessTokenWithPopup: getTokenWithPopup,
       });
       setDeleteDialogOpen(false);
@@ -262,7 +258,7 @@ export function ModelSidebar() {
   // Build tree structure from models
   const modelTree = buildModelTree(
     models,
-    twins,
+    twinCounts,
     handleDeleteModel,
     handleCreateTwin
   );
@@ -343,12 +339,15 @@ export function ModelSidebar() {
               {/* Twins Loading/Error Warning */}
               {twinsError && !isLoading && (
                 <div className="mb-2 p-2 text-xs bg-muted text-muted-foreground rounded border border-border flex flex-col gap-1">
-                  <span className="font-semibold text-destructive">Failed to load twin counts</span>
+                  <span className="font-semibold text-destructive">Digital Twins Error</span>
                   <span className="truncate" title={twinsError}>{twinsError}</span>
                   <Button
                       variant="link"
                       className="h-auto p-0 text-xs self-start"
-                      onClick={() => loadTwins(getAccessTokenSilently, getTokenWithPopup)}
+                      onClick={() => loadTwinCounts({ 
+                        getAccessTokenSilently, 
+                        getAccessTokenWithPopup: getTokenWithPopup 
+                      })}
                     >
                       Retry
                   </Button>
@@ -381,7 +380,10 @@ export function ModelSidebar() {
                       size="sm"
                       onClick={() => {
                         loadModels(getAccessTokenSilently, getTokenWithPopup);
-                        loadTwins(getAccessTokenSilently, getTokenWithPopup);
+                        loadTwinCounts({ 
+                          getAccessTokenSilently, 
+                          getAccessTokenWithPopup: getTokenWithPopup 
+                        });
                       }}
                       className="mt-2"
                     >

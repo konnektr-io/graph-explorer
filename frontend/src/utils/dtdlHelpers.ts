@@ -1,4 +1,4 @@
-import { mockModels } from "@/mocks/digitalTwinData";
+import { useModelsStore } from "@/stores/modelsStore";
 import type { BasicDigitalTwin } from "@/types";
 
 interface PropertyDefinition {
@@ -30,7 +30,8 @@ const getLocalizedText = (
 export const getModelPropertyDefinitions = (
   modelId: string
 ): Record<string, PropertyDefinition> => {
-  const model = mockModels.find((m) => m.id === modelId);
+  const models = useModelsStore.getState().models;
+  const model = models.find((m) => m.id === modelId);
   if (!model || !model.model) return {};
 
   const dtdlModel = model.model as unknown;
@@ -175,7 +176,8 @@ export const getPropertyMetadata = (
  * @returns Display name for the model
  */
 export const getModelDisplayName = (modelId: string): string => {
-  const model = mockModels.find((m) => m.id === modelId);
+  const models = useModelsStore.getState().models;
+  const model = models.find((m) => m.id === modelId);
   if (model?.displayName) {
     if (typeof model.displayName === "string") return model.displayName;
     const displayNames = model.displayName as Record<string, string>;

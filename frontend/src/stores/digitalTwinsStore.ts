@@ -45,6 +45,8 @@ const getClient = async (
 export interface DigitalTwinsState {
   // State
   twins: BasicDigitalTwin[];
+  availableModels: string[]; // List of available model IDs
+  twinCounts: Record<string, number>; // Map of model ID to count of twins
   relationships: BasicRelationship[];
   selectedTwinId: string | null;
   isLoading: boolean;
@@ -98,6 +100,9 @@ export interface DigitalTwinsState {
     updates: Operation[],
     auth?: AuthCallbacks
   ) => Promise<void>;
+  loadTwinCounts: (
+    auth?: AuthCallbacks
+  ) => Promise<void>;
   deleteRelationship: (
     sourceTwinId: string,
     relationshipId: string,
@@ -147,6 +152,8 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
   subscribeWithSelector((set, get) => ({
     // Initial state
     twins: [],
+    availableModels: [],
+    twinCounts: {},
     relationships: [],
     selectedTwinId: null,
     isLoading: false,
@@ -181,8 +188,6 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
             errorMessage = `API Error ${apiError.statusCode}: ${
               apiError.message || "Unknown error"
             }`;
-          } else if (apiError.message) {
-            errorMessage = apiError.message;
           }
         }
 
@@ -190,6 +195,58 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
           error: errorMessage,
           isLoading: false,
         });
+      }
+    },
+
+    loadTwinCounts: async (auth) => {
+      try {
+        const { getCurrentConnection } = useConnectionStore.getState();
+        const connection = getCurrentConnection();
+        const client = await getClient(
+             auth?.getAccessTokenSilently,
+             auth?.getAccessTokenWithPopup
+        );
+
+        let query = "SELECT $metadata.$model FROM DIGITALTWINS";
+        let isCypher = false;
+
+        // Use efficient Cypher query for KtrlPlane connections
+        if (connection?.authProvider === "ktrlplane") {
+             query = "MATCH (t:Twin) RETURN t.`$metadata`.`$model` AS _modelId, count(*)";
+             isCypher = true;
+        }
+
+        const iterator = client.queryTwins(query);
+        const counts: Record<string, number> = {};
+
+        for await (const page of iterator.byPage()) {
+             for (const item of page.value) {
+                 if (isCypher) {
+                     // Handle KtrlPlane Cypher result format
+                     const row = item as Record<string, any>;
+                     if (row._modelId) {
+                         // Support aliased 'count' or raw 'count(*)'
+                         const countVal = row.count ?? row["count(*)"];
+                         if (typeof countVal === 'number') {
+                             counts[row._modelId] = countVal;
+                         }
+                     }
+                 } else {
+                     // Handle Standard ADT result format
+                     const modelId = (item as any).$metadata?.$model;
+                     if (modelId) {
+                         counts[modelId] = (counts[modelId] || 0) + 1;
+                     }
+                 }
+             }
+        }
+
+        set({ twinCounts: counts, error: null });
+      } catch (error) {
+           console.error("Failed to load twin counts", error);
+           set({ 
+               error: error instanceof Error ? error.message : "Failed to load twin counts" 
+           });
       }
     },
 
@@ -213,12 +270,12 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
           JSON.stringify(payload)
         );
 
-        const newTwin = response as BasicDigitalTwin;
-
+        // Update local state
         set((state) => ({
-          twins: [...state.twins, newTwin],
+          twins: [...state.twins, payload as any],
           isLoading: false,
         }));
+
 
         return twinId;
       } catch (error) {
@@ -242,7 +299,7 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
         // Convert updates to JSON Patch operations
         const patch: Operation[] = Object.entries(updates).map(
           ([key, value]) => ({
-            op: "replace" as const,
+            op: "add" as const,
             path: `/${key}`,
             value,
           })
@@ -318,7 +375,16 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
         auth?.getAccessTokenWithPopup
       );
       const response = await client.getDigitalTwin(twinId);
-      return response as BasicDigitalTwin;
+      const twin = response as BasicDigitalTwin;
+
+      set((state) => ({
+        twins: [
+          ...state.twins.filter((t) => t.$dtId !== twinId),
+          twin,
+        ],
+      }));
+
+      return twin;
     },
 
     getTwinsByModel: (modelId) => {
