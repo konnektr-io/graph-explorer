@@ -199,6 +199,8 @@ export function GraphHeader() {
             </DropdownMenuContent>
           </DropdownMenu>*/}
 
+          <ModeToggle />
+
           {/* User Menu */}
           {isAuthenticated ? (
             <DropdownMenu>
@@ -253,8 +255,6 @@ export function GraphHeader() {
               Sign In
             </Button>
           )}
-
-          <ModeToggle />
         </div>
       </div>
     </header>
