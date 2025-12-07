@@ -38,31 +38,35 @@ export function GraphHeader() {
     getAccessTokenSilently,
   } = useAuth0();
 
-  // Fetch KtrlPlane Graph resources when authenticated
+  // Fetch KtrlPlane Graph resources when authenticated (initial load and after login)
+  const { ktrlPlaneConnections } = useConnectionStore();
   useEffect(() => {
     if (isAuthenticated && !isLoading) {
-      const loadKtrlPlaneResources = async () => {
-        try {
-          console.log("Fetching KtrlPlane resources...");
-          const token = await getAccessTokenSilently({
-            authorizationParams: {
-              audience:
-                import.meta.env.VITE_AUTH0_KTRLPLANE_AUDIENCE ||
-                "https://ktrlplane.konnektr.io",
-            },
-          });
-          console.log("Got KtrlPlane token, fetching resources...");
-          const resources = await fetchGraphResources(token);
-          console.log("Fetched resources:", resources);
-          setKtrlPlaneConnections(resources);
-        } catch (error) {
-          console.warn("Could not load KtrlPlane resources:", error);
-          // Clear any existing KtrlPlane connections on error
-          setKtrlPlaneConnections([]);
-          // Don't fail the app, user can still use local connections
-        }
-      };
-      loadKtrlPlaneResources();
+      // Only fetch if not already loaded
+      if (!ktrlPlaneConnections || ktrlPlaneConnections.length === 0) {
+        const loadKtrlPlaneResources = async () => {
+          try {
+            console.log("Fetching KtrlPlane resources...");
+            const token = await getAccessTokenSilently({
+              authorizationParams: {
+                audience:
+                  import.meta.env.VITE_AUTH0_KTRLPLANE_AUDIENCE ||
+                  "https://ktrlplane.konnektr.io",
+              },
+            });
+            console.log("Got KtrlPlane token, fetching resources...");
+            const resources = await fetchGraphResources(token);
+            console.log("Fetched resources:", resources);
+            setKtrlPlaneConnections(resources);
+          } catch (error) {
+            console.warn("Could not load KtrlPlane resources:", error);
+            // Clear any existing KtrlPlane connections on error
+            setKtrlPlaneConnections([]);
+            // Don't fail the app, user can still use local connections
+          }
+        };
+        loadKtrlPlaneResources();
+      }
     } else if (!isAuthenticated && !isLoading) {
       // Clear KtrlPlane connections when logged out
       setKtrlPlaneConnections([]);
@@ -72,6 +76,7 @@ export function GraphHeader() {
     isLoading,
     getAccessTokenSilently,
     setKtrlPlaneConnections,
+    ktrlPlaneConnections,
   ]);
 
   const handleLogout = () => {
