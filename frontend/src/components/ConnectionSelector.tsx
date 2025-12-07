@@ -71,8 +71,11 @@ export function ConnectionSelector(): React.ReactElement {
   const { isAuthenticated, getAccessTokenSilently } = useAuth0();
 
   const [open, setOpen] = useState(false);
+  const [showCustomForm, setShowCustomForm] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [editingConnectionId, setEditingConnectionId] = useState<string | null>(null);
+  const [editingConnectionId, setEditingConnectionId] = useState<string | null>(
+    null
+  );
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [form, setForm] = useState({
@@ -92,7 +95,7 @@ export function ConnectionSelector(): React.ReactElement {
 
   const handleRefresh = async () => {
     if (!isAuthenticated) return;
-    
+
     setIsRefreshing(true);
     try {
       const token = await getAccessTokenSilently({
@@ -113,8 +116,9 @@ export function ConnectionSelector(): React.ReactElement {
 
   const handleEdit = () => {
     if (!currentConnection || currentConnection.isKtrlPlaneManaged) return;
-    
+
     setEditMode(true);
+    setShowCustomForm(true);
     setEditingConnectionId(currentConnection.id);
     setForm({
       name: currentConnection.name,
@@ -128,6 +132,40 @@ export function ConnectionSelector(): React.ReactElement {
       audience: currentConnection.authConfig?.audience || "",
     });
     setOpen(true);
+  };
+
+  const handleDeployOnKtrlPlane = () => {
+    window.open(
+      "https://ktrlplane.konnektr.io/resources/create?resource_type=Konnektr.Graph&sku=standard",
+      "_blank"
+    );
+    setOpen(false);
+  };
+
+  const handleShowCustomForm = () => {
+    setShowCustomForm(true);
+  };
+
+  const handleDialogOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    if (!newOpen) {
+      // Reset state when closing
+      setShowCustomForm(false);
+      setEditMode(false);
+      setEditingConnectionId(null);
+      setForm({
+        name: "",
+        adtHost: "",
+        description: "",
+        authProvider: "none",
+        clientId: "",
+        tenantId: "",
+        scopes: "",
+        domain: "",
+        audience: "",
+      });
+      setError(null);
+    }
   };
 
   const handleAdd = async () => {
@@ -178,7 +216,7 @@ export function ConnectionSelector(): React.ReactElement {
       addConnection(newConnection);
       await setCurrentConnection(newConnection.id);
     }
-    
+
     setForm({
       name: "",
       adtHost: "",
@@ -193,6 +231,7 @@ export function ConnectionSelector(): React.ReactElement {
     setError(null);
     setEditMode(false);
     setEditingConnectionId(null);
+    setShowCustomForm(false);
     setOpen(false);
   };
 
@@ -275,7 +314,11 @@ export function ConnectionSelector(): React.ReactElement {
           <DropdownMenuContent align="end">
             {isAuthenticated && (
               <DropdownMenuItem onClick={handleRefresh} disabled={isRefreshing}>
-                <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  className={`mr-2 h-4 w-4 ${
+                    isRefreshing ? "animate-spin" : ""
+                  }`}
+                />
                 Refresh KtrlPlane Resources
               </DropdownMenuItem>
             )}
@@ -298,7 +341,7 @@ export function ConnectionSelector(): React.ReactElement {
         </DropdownMenu>
       )}
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={handleDialogOpenChange}>
         <DialogTrigger asChild>
           <Button variant="outline" size="sm">
             Add
@@ -306,196 +349,257 @@ export function ConnectionSelector(): React.ReactElement {
         </DialogTrigger>
         <DialogContent className="max-h-[90vh]">
           <DialogHeader>
-            <DialogTitle>{editMode ? "Edit Connection" : "Add Connection"}</DialogTitle>
+            <DialogTitle>
+              {editMode
+                ? "Edit Connection"
+                : showCustomForm
+                ? "Add Custom Connection"
+                : "Add Connection"}
+            </DialogTitle>
           </DialogHeader>
           <ScrollArea className="max-h-[60vh] pr-4">
-            <form
-              id="connection-form"
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleAdd();
-              }}
-              className="space-y-4"
-            >
-              <div>
-                <Label htmlFor="conn-name">Name</Label>
-                <Input
-                  id="conn-name"
-                  value={form.name}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, name: e.target.value }))
-                  }
-                  placeholder="e.g. Local Dev"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="conn-host">Host</Label>
-                <Input
-                  id="conn-host"
-                  value={form.adtHost}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, adtHost: e.target.value }))
-                  }
-                  placeholder="e.g. localhost:5000"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="conn-desc">Description</Label>
-                <Input
-                  id="conn-desc"
-                  value={form.description}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, description: e.target.value }))
-                  }
-                  placeholder="Optional"
-                />
-              </div>
+            {!showCustomForm && !editMode ? (
+              <div className="space-y-4 py-4">
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium">
+                    Deploy Konnektr Graph on KtrlPlane
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Get started quickly with a fully managed Konnektr Graph
+                    instance. Deploy in seconds and manage everything from your
+                    KtrlPlane dashboard.
+                  </p>
+                  <Button
+                    onClick={handleDeployOnKtrlPlane}
+                    className="w-full"
+                    size="lg"
+                  >
+                    Deploy on KtrlPlane
+                  </Button>
+                </div>
 
-              {/* Auth Provider Selector */}
-              <div>
-                <Label htmlFor="auth-provider">Authentication</Label>
-                <Select
-                  value={form.authProvider}
-                  onValueChange={(value) =>
-                    setForm((f) => ({
-                      ...f,
-                      authProvider: value as AuthProvider,
-                    }))
-                  }
-                >
-                  <SelectTrigger id="auth-provider">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None (Local/Proxy)</SelectItem>
-                    <SelectItem value="msal">
-                      MSAL (Azure Digital Twins)
-                    </SelectItem>
-                    <SelectItem value="auth0">
-                      Auth0 (Konnektr Hosted)
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {form.authProvider === "none" && "No authentication required"}
-                  {form.authProvider === "msal" &&
-                    "Azure AD authentication with PKCE"}
-                  {form.authProvider === "auth0" && "Auth0 authentication"}
-                </p>
-              </div>
-
-              {/* MSAL Configuration Fields */}
-              {form.authProvider === "msal" && (
-                <div className="space-y-3 p-3 border rounded-md bg-muted/30">
-                  <p className="text-sm font-medium">MSAL Configuration</p>
-                  <div>
-                    <Label htmlFor="msal-clientId">
-                      Client ID <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="msal-clientId"
-                      value={form.clientId}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, clientId: e.target.value }))
-                      }
-                      placeholder="00000000-0000-0000-0000-000000000000"
-                      required={form.authProvider === "msal"}
-                    />
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
                   </div>
-                  <div>
-                    <Label htmlFor="msal-tenantId">
-                      Tenant ID <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="msal-tenantId"
-                      value={form.tenantId}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, tenantId: e.target.value }))
-                      }
-                      placeholder="00000000-0000-0000-0000-000000000000"
-                      required={form.authProvider === "msal"}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="msal-scopes">Scopes (optional)</Label>
-                    <Input
-                      id="msal-scopes"
-                      value={form.scopes}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, scopes: e.target.value }))
-                      }
-                      placeholder="https://digitaltwins.azure.net/.default"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Comma-separated. Defaults to Azure Digital Twins scope.
-                    </p>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      Or
+                    </span>
                   </div>
                 </div>
-              )}
 
-              {/* Auth0 Configuration Fields */}
-              {form.authProvider === "auth0" && (
-                <div className="space-y-3 p-3 border rounded-md bg-muted/30">
-                  <p className="text-sm font-medium">Auth0 Configuration</p>
-                  <div>
-                    <Label htmlFor="auth0-domain">
-                      Domain <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="auth0-domain"
-                      value={form.domain}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, domain: e.target.value }))
-                      }
-                      placeholder="your-tenant.auth0.com"
-                      required={form.authProvider === "auth0"}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="auth0-clientId">
-                      Client ID <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="auth0-clientId"
-                      value={form.clientId}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, clientId: e.target.value }))
-                      }
-                      placeholder="your-client-id"
-                      required={form.authProvider === "auth0"}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="auth0-audience">
-                      Audience <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="auth0-audience"
-                      value={form.audience}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, audience: e.target.value }))
-                      }
-                      placeholder="https://your-api-identifier"
-                      required={form.authProvider === "auth0"}
-                    />
-                  </div>
+                <div className="space-y-3">
+                  <h3 className="text-sm font-medium">
+                    Connect to Existing Instance
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Connect to your own Azure Digital Twins or self-hosted
+                    Konnektr Graph instance.
+                  </p>
+                  <Button
+                    onClick={handleShowCustomForm}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    Add Custom Connection
+                  </Button>
                 </div>
-              )}
+              </div>
+            ) : (
+              <form
+                id="connection-form"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleAdd();
+                }}
+                className="space-y-4"
+              >
+                <div>
+                  <Label htmlFor="conn-name">Name</Label>
+                  <Input
+                    id="conn-name"
+                    value={form.name}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, name: e.target.value }))
+                    }
+                    placeholder="e.g. Local Dev"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="conn-host">Host</Label>
+                  <Input
+                    id="conn-host"
+                    value={form.adtHost}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, adtHost: e.target.value }))
+                    }
+                    placeholder="e.g. localhost:5000"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="conn-desc">Description</Label>
+                  <Input
+                    id="conn-desc"
+                    value={form.description}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, description: e.target.value }))
+                    }
+                    placeholder="Optional"
+                  />
+                </div>
 
-              {error && <div className="text-red-500 text-sm">{error}</div>}
-            </form>
+                {/* Auth Provider Selector */}
+                <div>
+                  <Label htmlFor="auth-provider">Authentication</Label>
+                  <Select
+                    value={form.authProvider}
+                    onValueChange={(value) =>
+                      setForm((f) => ({
+                        ...f,
+                        authProvider: value as AuthProvider,
+                      }))
+                    }
+                  >
+                    <SelectTrigger id="auth-provider">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None (Local/Proxy)</SelectItem>
+                      <SelectItem value="msal">
+                        MSAL (Azure Digital Twins)
+                      </SelectItem>
+                      <SelectItem value="auth0">
+                        Auth0 (Konnektr Graph Self-Hosted)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {form.authProvider === "none" &&
+                      "No authentication required"}
+                    {form.authProvider === "msal" &&
+                      "Azure AD authentication with PKCE"}
+                    {form.authProvider === "auth0" && "Auth0 authentication"}
+                  </p>
+                </div>
+
+                {/* MSAL Configuration Fields */}
+                {form.authProvider === "msal" && (
+                  <div className="space-y-3 p-3 border rounded-md bg-muted/30">
+                    <p className="text-sm font-medium">MSAL Configuration</p>
+                    <div>
+                      <Label htmlFor="msal-clientId">
+                        Client ID <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="msal-clientId"
+                        value={form.clientId}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, clientId: e.target.value }))
+                        }
+                        placeholder="00000000-0000-0000-0000-000000000000"
+                        required={form.authProvider === "msal"}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="msal-tenantId">
+                        Tenant ID <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="msal-tenantId"
+                        value={form.tenantId}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, tenantId: e.target.value }))
+                        }
+                        placeholder="00000000-0000-0000-0000-000000000000"
+                        required={form.authProvider === "msal"}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="msal-scopes">Scopes (optional)</Label>
+                      <Input
+                        id="msal-scopes"
+                        value={form.scopes}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, scopes: e.target.value }))
+                        }
+                        placeholder="https://digitaltwins.azure.net/.default"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Comma-separated. Defaults to Azure Digital Twins scope.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Auth0 Configuration Fields */}
+                {form.authProvider === "auth0" && (
+                  <div className="space-y-3 p-3 border rounded-md bg-muted/30">
+                    <p className="text-sm font-medium">Auth0 Configuration</p>
+                    <div>
+                      <Label htmlFor="auth0-domain">
+                        Domain <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="auth0-domain"
+                        value={form.domain}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, domain: e.target.value }))
+                        }
+                        placeholder="your-tenant.auth0.com"
+                        required={form.authProvider === "auth0"}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="auth0-clientId">
+                        Client ID <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="auth0-clientId"
+                        value={form.clientId}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, clientId: e.target.value }))
+                        }
+                        placeholder="your-client-id"
+                        required={form.authProvider === "auth0"}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="auth0-audience">
+                        Audience <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="auth0-audience"
+                        value={form.audience}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, audience: e.target.value }))
+                        }
+                        placeholder="https://your-api-identifier"
+                        required={form.authProvider === "auth0"}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {error && <div className="text-red-500 text-sm">{error}</div>}
+              </form>
+            )}
           </ScrollArea>
           <DialogFooter>
-            <Button type="submit" form="connection-form">
-              {editMode ? "Save Changes" : "Add Connection"}
-            </Button>
-            <DialogClose asChild>
-              <Button type="button" variant="ghost">
-                Cancel
-              </Button>
-            </DialogClose>
+            {(showCustomForm || editMode) && (
+              <>
+                <Button type="submit" form="connection-form">
+                  {editMode ? "Save Changes" : "Add Connection"}
+                </Button>
+                <DialogClose asChild>
+                  <Button type="button" variant="ghost">
+                    Cancel
+                  </Button>
+                </DialogClose>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
