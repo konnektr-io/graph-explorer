@@ -19,8 +19,8 @@ import konnektrLogo from "@/assets/konnektr.svg";
 
 export function GraphHeader() {
   const {
-    mainView,
-    setMainView,
+    // mainView,
+    // setMainView,
     showRightPanel,
     setShowRightPanel,
     showLeftPanel,
@@ -107,7 +107,9 @@ export function GraphHeader() {
           {/* Logo and Title - Main Brand */}
           <div className="flex items-center gap-2">
             <img src={konnektrLogo} alt="Konnektr logo" className="h-7 w-7" />
-            <span className="font-semibold text-foreground">Graph</span>
+            <span className="font-semibold text-foreground">
+              Konnektr Graph
+            </span>
           </div>
 
           {/* Connection Selector */}
@@ -116,7 +118,7 @@ export function GraphHeader() {
 
         <div className="flex items-center gap-4">
           {/* View Switcher */}
-          <div className="flex gap-1 p-1 bg-muted rounded-md">
+          {/* <div className="flex gap-1 p-1 bg-muted rounded-md">
             <Button
               variant={mainView === "query" ? "default" : "ghost"}
               size="sm"
@@ -133,7 +135,7 @@ export function GraphHeader() {
             >
               Model Graph
             </Button>
-          </div>
+          </div> */}
 
           {/* Inspector Panel Toggle */}
           {!showRightPanel && (
