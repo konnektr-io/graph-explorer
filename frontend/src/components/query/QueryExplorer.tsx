@@ -4,7 +4,7 @@ import { MonacoEditor } from "@/components/query/MonacoEditor";
 import { QueryResults } from "@/components/query/QueryResults";
 import { QueryHistory } from "@/components/query/QueryHistory";
 import { Button } from "@/components/ui/button";
-import { Play, Save, History, Settings2 } from "lucide-react";
+import { Play, History } from "lucide-react";
 import { useQueryStore } from "@/stores/queryStore";
 import { useAuth0 } from "@auth0/auth0-react";
 
@@ -39,16 +39,16 @@ export function QueryExplorer() {
     await executeQuery(currentQuery, getAccessTokenSilently, getTokenWithPopup);
   };
 
-  const handleSaveQuery = () => {
+  /* const handleSaveQuery = () => {
     // TODO: Implement save query functionality
     console.log("Save query:", currentQuery);
-  };
+  }; */
 
-  const handleFormatQuery = () => {
+  /* const handleFormatQuery = () => {
     if (editorRef.current) {
       editorRef.current.getAction("editor.action.formatDocument").run();
     }
-  };
+  }; */
 
   return (
     <div className="flex flex-col h-full w-full bg-background">
@@ -65,7 +65,7 @@ export function QueryExplorer() {
             {isExecuting ? "Running..." : "Run Query"}
           </Button>
 
-          <Button
+          {/* <Button
             variant="outline"
             size="sm"
             onClick={handleSaveQuery}
@@ -84,7 +84,7 @@ export function QueryExplorer() {
           >
             <Settings2 className="w-4 h-4" />
             Format
-          </Button>
+          </Button> */}
         </div>
 
         <div className="flex items-center gap-2">
