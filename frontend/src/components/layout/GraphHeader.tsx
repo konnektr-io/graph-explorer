@@ -36,6 +36,7 @@ export function GraphHeader() {
     loginWithRedirect,
     logout,
     getAccessTokenSilently,
+    getAccessTokenWithPopup,
   } = useAuth0();
 
   // Fetch KtrlPlane Graph resources when authenticated (initial load and after login)
@@ -47,17 +48,37 @@ export function GraphHeader() {
         const loadKtrlPlaneResources = async () => {
           try {
             console.log("Fetching KtrlPlane resources...");
-            const token = await getAccessTokenSilently({
-              authorizationParams: {
-                audience:
-                  import.meta.env.VITE_AUTH0_KTRLPLANE_AUDIENCE ||
-                  "https://ktrlplane.konnektr.io",
-              },
-            });
-            console.log("Got KtrlPlane token, fetching resources...");
-            const resources = await fetchGraphResources(token);
-            console.log("Fetched resources:", resources);
-            setKtrlPlaneConnections(resources);
+            let token: string | undefined;
+            try {
+              token = await getAccessTokenSilently({
+                authorizationParams: {
+                  audience:
+                    import.meta.env.VITE_AUTH0_KTRLPLANE_AUDIENCE ||
+                    "https://ktrlplane.konnektr.io",
+                },
+              });
+            } catch (silentError) {
+              console.warn("Silent auth failed, trying popup:", silentError);
+              // If silent auth fails (e.g., missing refresh token), try popup
+              token = await getAccessTokenWithPopup({
+                authorizationParams: {
+                  audience:
+                    import.meta.env.VITE_AUTH0_KTRLPLANE_AUDIENCE ||
+                    "https://ktrlplane.konnektr.io",
+                },
+              });
+            }
+            if (typeof token === "string" && token.length > 0) {
+              console.log("Got KtrlPlane token, fetching resources...");
+              const resources = await fetchGraphResources(token);
+              console.log("Fetched resources:", resources);
+              setKtrlPlaneConnections(resources);
+            } else {
+              console.warn(
+                "No valid KtrlPlane token received. Skipping resource fetch."
+              );
+              setKtrlPlaneConnections([]);
+            }
           } catch (error) {
             console.warn("Could not load KtrlPlane resources:", error);
             // Clear any existing KtrlPlane connections on error
