@@ -276,10 +276,8 @@ export function ConnectionSelector(): React.ReactElement {
               <SelectLabel>KtrlPlane Managed</SelectLabel>
               {ktrlPlaneConnections.map((conn) => (
                 <SelectItem key={conn.id} value={conn.id}>
-                  <div className="flex flex-col gap-0.5">
-                    <SelectItemText>
-                      <span className="font-medium">{conn.name}</span>
-                    </SelectItemText>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{conn.name}</span>
                     {conn.ktrlPlaneProjectId && (
                       <span className="text-xs text-muted-foreground">
                         {conn.ktrlPlaneProjectId}
