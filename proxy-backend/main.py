@@ -54,6 +54,7 @@ async def proxy(full_path: str, request: Request):
                 target_url,
                 headers=headers,
                 content=await request.body(),
+                params=request.query_params,
             )
             resp = await client.send(req, stream=True)
             logger.info(
