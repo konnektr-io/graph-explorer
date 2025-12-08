@@ -203,7 +203,7 @@ export const useConnectionStore = create<ConnectionState>()(
           // Use internal Kubernetes service address if possible
           const internalEndpoint =
             resource.resource_id && resource.project_id
-              ? `http://${resource.resource_id}-api.${resource.project_id}.svc.cluster.local`
+              ? `${resource.resource_id}-api.${resource.project_id}.svc.cluster.local`
               : undefined;
           // Prefer internal, else fallback to public DNS
           const endpoint =
