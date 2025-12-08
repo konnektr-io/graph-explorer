@@ -45,6 +45,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { SelectItemText } from "@radix-ui/react-select";
 
 export function ConnectionSelector(): React.ReactElement {
   const ktrlPlaneConnections = useConnectionStore(
@@ -275,14 +276,14 @@ export function ConnectionSelector(): React.ReactElement {
               <SelectLabel>KtrlPlane Managed</SelectLabel>
               {ktrlPlaneConnections.map((conn) => (
                 <SelectItem key={conn.id} value={conn.id}>
-                  <div className="flex flex-col gap-0.5">
+                  <SelectItemText>
                     <span className="font-medium">{conn.name}</span>
-                    {conn.ktrlPlaneProjectId && (
-                      <span className="text-xs text-muted-foreground">
-                        {conn.ktrlPlaneProjectId}
-                      </span>
-                    )}
-                  </div>
+                  </SelectItemText>
+                  {conn.ktrlPlaneProjectId && (
+                    <span className="text-xs text-muted-foreground">
+                      {conn.ktrlPlaneProjectId}
+                    </span>
+                  )}
                 </SelectItem>
               ))}
             </SelectGroup>
