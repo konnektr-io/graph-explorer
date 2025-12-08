@@ -198,12 +198,16 @@ export const useConnectionStore = create<ConnectionState>()(
       },
 
       setKtrlPlaneConnections: (resources) => {
-        // Map all resources - endpoint will be constructed from resource_id if not provided
+        // Map all resources - prefer internal service address for instant connectivity
         const connections = resources.map((resource) => {
-          // Construct endpoint from resource_id if not explicitly provided
+          // Use internal Kubernetes service address if possible
+          const internalEndpoint =
+            resource.resource_id && resource.project_id
+              ? `http://${resource.resource_id}-api.${resource.project_id}.svc.cluster.local`
+              : undefined;
+          // Prefer internal, else fallback to public DNS
           const endpoint =
-            resource.endpoint ||
-            `${resource.resource_id}.api.graph.konnektr.io`;
+            internalEndpoint || `${resource.resource_id}.api.graph.konnektr.io`;
 
           return {
             id: `ktrlplane-${resource.resource_id}`,
