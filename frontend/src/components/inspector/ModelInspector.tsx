@@ -1,4 +1,4 @@
-import { FileCode2, Layers, Tag, Info } from "lucide-react";
+import { FileCode2, Layers, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 // import { Button } from "@/components/ui/button";
 import { useModelsStore } from "@/stores/modelsStore";
@@ -25,7 +25,7 @@ export function ModelInspector({ modelId }: ModelInspectorProps) {
     );
   }
 
-  const { model, id } = modelData;
+  const { model } = modelData;
 
   return (
     <div className="space-y-4 flex flex-col h-full">
