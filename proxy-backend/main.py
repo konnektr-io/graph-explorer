@@ -26,7 +26,9 @@ async def proxy(full_path: str, request: Request):
         logger.warning("No x-adt-host header found")
         raise HTTPException(status_code=400, detail="Missing x-adt-host header")
 
-    target_url = f"https://{adt_host}/{full_path}"
+    # Use http for internal cluster services, https for external
+    protocol = "http" if adt_host.endswith(".cluster.local") else "https"
+    target_url = f"{protocol}://{adt_host}/{full_path}"
     logger.info(f"Proxying {request.method} {request.url.path} -> {target_url}")
 
     # Prepare request to backend
