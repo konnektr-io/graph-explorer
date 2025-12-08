@@ -45,7 +45,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SelectItemText } from "@radix-ui/react-select";
 
 export function ConnectionSelector(): React.ReactElement {
   const ktrlPlaneConnections = useConnectionStore(
