@@ -3,6 +3,7 @@ from fastapi.responses import StreamingResponse
 import httpx
 import logging
 import os
+import re
 
 app = FastAPI()
 logger = logging.getLogger("proxy")
@@ -26,8 +27,16 @@ async def proxy(full_path: str, request: Request):
         logger.warning("No x-adt-host header found")
         raise HTTPException(status_code=400, detail="Missing x-adt-host header")
 
-    # Use http for internal cluster services, https for external
-    protocol = "http" if adt_host.endswith(".cluster.local") else "https"
+    # Use http for internal cluster services (.cluster.local, with or without port)
+    # If port is missing for .cluster.local, append :8080
+    cluster_local_pattern = r"\.cluster\.local(:\d+)?$"
+    if re.search(cluster_local_pattern, adt_host):
+        protocol = "http"
+        # Check if port is present
+        if not re.search(r"\.cluster\.local:\d+$", adt_host):
+            adt_host += ":8080"
+    else:
+        protocol = "https"
     target_url = f"{protocol}://{adt_host}/{full_path}"
     logger.info(f"Proxying {request.method} {request.url.path} -> {target_url}")
 
