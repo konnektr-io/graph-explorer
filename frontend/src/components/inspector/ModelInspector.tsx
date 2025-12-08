@@ -42,9 +42,9 @@ export function ModelInspector({ modelId }: ModelInspectorProps) {
               {model?.["@id"] || ""}
             </code>
           </div>
-          <div className="flex justify-between items-center text-sm">
+          {/* <div className="flex justify-between items-center text-sm">
             <span className="text-muted-foreground">Upload Time</span>
-          </div>
+          </div> */}
           <div className="flex justify-between items-start text-sm">
             <span className="text-muted-foreground">Display Name</span>
             <span className="text-right break-all max-w-[200px]">
@@ -88,19 +88,28 @@ export function ModelInspector({ modelId }: ModelInspectorProps) {
         </div>
       </div>
 
-      {/* Context & Version */}
-      <div className="space-y-2">
-        <h3 className="font-semibold text-sm flex items-center gap-2">
-          <Info className="w-4 h-4" />
-          Context & Version
-        </h3>
-        <div className="flex justify-between items-start text-sm">
-          <span className="text-muted-foreground">Model ID</span>
-          <code className="font-mono text-xs bg-muted px-2 py-1 rounded">
-            {id}
-          </code>
+      {/* Extends */}
+      {model?.extends && (
+        <div className="space-y-2">
+          <h3 className="font-semibold text-sm flex items-center gap-2">
+            <Tag className="w-4 h-4" />
+            Extends
+          </h3>
+          <div className="space-y-1">
+            {(Array.isArray(model.extends)
+              ? model.extends
+              : [model.extends]
+            ).map((extend, index) => (
+              <code
+                key={index}
+                className="block font-mono text-xs bg-muted px-2 py-1 rounded break-all"
+              >
+                {extend}
+              </code>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Contents/Properties */}
       {model?.contents && model.contents.length > 0 && (
@@ -147,29 +156,6 @@ export function ModelInspector({ modelId }: ModelInspectorProps) {
                   </div>
                 )}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Extends */}
-      {model?.extends && (
-        <div className="space-y-2">
-          <h3 className="font-semibold text-sm flex items-center gap-2">
-            <Tag className="w-4 h-4" />
-            Extends
-          </h3>
-          <div className="space-y-1">
-            {(Array.isArray(model.extends)
-              ? model.extends
-              : [model.extends]
-            ).map((extend, index) => (
-              <code
-                key={index}
-                className="block font-mono text-xs bg-muted px-2 py-1 rounded break-all"
-              >
-                {extend}
-              </code>
             ))}
           </div>
         </div>
