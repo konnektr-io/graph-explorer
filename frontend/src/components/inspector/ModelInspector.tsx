@@ -1,6 +1,6 @@
 import { FileCode2, Layers, Tag, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+// import { Button } from "@/components/ui/button";
 import { useModelsStore } from "@/stores/modelsStore";
 
 interface ModelInspectorProps {
@@ -28,7 +28,7 @@ export function ModelInspector({ modelId }: ModelInspectorProps) {
   const { model, id } = modelData;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 flex flex-col h-full">
       {/* Model Identity */}
       <div className="space-y-2">
         <h3 className="font-semibold text-sm flex items-center gap-2">
@@ -104,12 +104,12 @@ export function ModelInspector({ modelId }: ModelInspectorProps) {
 
       {/* Contents/Properties */}
       {model?.contents && model.contents.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-2 flex-1 flex flex-col min-h-0">
           <h3 className="font-semibold text-sm flex items-center gap-2">
             <Layers className="w-4 h-4" />
             Contents ({model.contents.length})
           </h3>
-          <div className="space-y-2 max-h-48 overflow-y-auto">
+          <div className="space-y-2 flex-1 overflow-y-auto min-h-0">
             {model.contents.map((content, index) => (
               <div key={index} className="border rounded-md p-2 text-sm">
                 <div className="flex justify-between items-start mb-1">
@@ -176,7 +176,7 @@ export function ModelInspector({ modelId }: ModelInspectorProps) {
       )}
 
       {/* Actions */}
-      <div className="pt-4 border-t space-y-2">
+      {/* <div className="pt-4 border-t space-y-2">
         <Button variant="outline" size="sm" className="w-full text-xs">
           View Full DTDL Definition
         </Button>
@@ -184,7 +184,7 @@ export function ModelInspector({ modelId }: ModelInspectorProps) {
           <div>Select model in sidebar or query results</div>
           <div>Model validation: {model?.contents ? "Valid" : "Unknown"}</div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }
