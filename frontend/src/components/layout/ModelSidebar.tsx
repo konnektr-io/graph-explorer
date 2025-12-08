@@ -233,6 +233,7 @@ export function ModelSidebar() {
     setIsDeleting(true);
     try {
       await deleteModel(modelToDelete, {
+        getAccessTokenSilently,
         getAccessTokenWithPopup: getTokenWithPopup,
       });
       setDeleteDialogOpen(false);
