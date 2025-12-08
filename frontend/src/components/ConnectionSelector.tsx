@@ -272,7 +272,7 @@ export function ConnectionSelector(): React.ReactElement {
         <SelectContent>
           {ktrlPlaneConnections.length > 0 && (
             <SelectGroup>
-              <SelectLabel>KtrlPlane Managed</SelectLabel>
+              <SelectLabel>Konnektr Managed</SelectLabel>
               {ktrlPlaneConnections.map((conn) => (
                 <SelectItem key={conn.id} value={conn.id}>
                   <div className="flex items-center gap-2">
@@ -290,7 +290,7 @@ export function ConnectionSelector(): React.ReactElement {
           <SelectGroup>
             <SelectLabel>
               {ktrlPlaneConnections.length > 0
-                ? "Local Connections"
+                ? "Custom Connections"
                 : "Connections"}
             </SelectLabel>
             {localConnections.map((conn) => (
