@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   useConnectionStore,
   validateConnectionAuth,
@@ -93,6 +93,10 @@ export function ConnectionSelector(): React.ReactElement {
     audience: "",
   });
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    handleRefresh();
+  }, [isAuthenticated]);
 
   const handleRefresh = async () => {
     if (!isAuthenticated) return;
