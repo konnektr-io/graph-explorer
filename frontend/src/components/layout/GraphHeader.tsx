@@ -14,7 +14,6 @@ import { useConnectionStore } from "../../stores/connectionStore";
 import { ModeToggle } from "../mode-toggle";
 import { ConnectionSelector } from "@/components/ConnectionSelector";
 import { useAuth0 } from "@auth0/auth0-react";
-import { fetchGraphResources } from "@/services/ktrlplaneClient";
 import konnektrLogo from "@/assets/konnektr.svg";
 
 export function GraphHeader() {
@@ -27,87 +26,47 @@ export function GraphHeader() {
     setShowLeftPanel,
   } = useWorkspaceStore();
 
-  const { setKtrlPlaneConnections } = useConnectionStore();
-
   const {
     isAuthenticated,
-    isLoading,
+    // isLoading,
     user,
     loginWithRedirect,
     logout,
-    getAccessTokenSilently,
-    getAccessTokenWithPopup,
   } = useAuth0();
 
-  // Fetch KtrlPlane Graph resources when authenticated (initial load and after login)
+  // Auto-select connection based on x-adt-host query parameter
   useEffect(() => {
-    const loadKtrlPlaneResources = async (showPopupOnError = false) => {
-      try {
-        console.log("Fetching KtrlPlane resources...");
-        let token: string | undefined;
-        try {
-          token = await getAccessTokenSilently({
-            authorizationParams: {
-              audience:
-                import.meta.env.VITE_AUTH0_KTRLPLANE_AUDIENCE ||
-                "https://ktrlplane.konnektr.io",
-            },
-          });
-        } catch (silentError) {
-          if (showPopupOnError) {
-            console.warn("Silent auth failed, trying popup:", silentError);
-            // If silent auth fails (e.g., missing refresh token), try popup
-            token = await getAccessTokenWithPopup({
-              authorizationParams: {
-                audience:
-                  import.meta.env.VITE_AUTH0_KTRLPLANE_AUDIENCE ||
-                  "https://ktrlplane.konnektr.io",
-              },
-            });
-          } else {
-            throw silentError;
-          }
-        }
-        if (typeof token === "string" && token.length > 0) {
-          console.log("Got KtrlPlane token, fetching resources...");
-          const resources = await fetchGraphResources(token);
-          console.log("Configured", resources.length, "KtrlPlane connections");
-          setKtrlPlaneConnections(resources);
-        } else {
-          console.warn(
-            "No valid KtrlPlane token received. Skipping resource fetch."
-          );
-          setKtrlPlaneConnections([]);
-        }
-      } catch (error) {
-        console.warn("Could not load KtrlPlane resources:", error);
-        // Clear any existing KtrlPlane connections on error
-        setKtrlPlaneConnections([]);
-        // Don't fail the app, user can still use local connections
-      }
-    };
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetHost = urlParams.get("x-adt-host");
 
-    if (isAuthenticated && !isLoading) {
-      // Initial fetch with popup fallback
-      loadKtrlPlaneResources(true);
+    if (!targetHost) {
+      return; // No query parameter, nothing to do
+    }
 
-      // Set up periodic refresh every 5 minutes (300000ms)
-      const intervalId = setInterval(() => {
-        loadKtrlPlaneResources(false);
-      }, 300000);
+    const { getAllConnections, setCurrentConnection, getCurrentConnection } =
+      useConnectionStore.getState();
+    const allConnections = getAllConnections();
+    const currentConnection = getCurrentConnection();
 
-      // Cleanup interval on unmount or when auth state changes
-      return () => clearInterval(intervalId);
-    } else if (!isAuthenticated && !isLoading) {
-      // Clear KtrlPlane connections when logged out
-      setKtrlPlaneConnections([]);
+    // Don't switch if already on the correct connection
+    if (currentConnection?.adtHost === targetHost) {
+      return;
+    }
+
+    // Find matching connection by adtHost
+    const matchingConnection = allConnections.find(
+      (conn) => conn.adtHost === targetHost
+    );
+
+    if (matchingConnection) {
+      console.log(
+        `Auto-selecting connection from x-adt-host: ${matchingConnection.name}`
+      );
+      setCurrentConnection(matchingConnection.id);
     }
   }, [
-    isAuthenticated,
-    isLoading,
-    getAccessTokenSilently,
-    getAccessTokenWithPopup,
-    setKtrlPlaneConnections,
+    useConnectionStore.getState().ktrlPlaneConnections,
+    useConnectionStore.getState().connections,
   ]);
 
   const handleLogout = () => {

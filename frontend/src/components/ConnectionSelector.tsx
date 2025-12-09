@@ -68,7 +68,8 @@ export function ConnectionSelector(): React.ReactElement {
     (state) => state.setKtrlPlaneConnections
   );
 
-  const { isAuthenticated, getAccessTokenSilently } = useAuth0();
+  const { isAuthenticated, getAccessTokenSilently, getAccessTokenWithPopup } =
+    useAuth0();
 
   const [open, setOpen] = useState(false);
   const [showCustomForm, setShowCustomForm] = useState(false);
@@ -98,17 +99,38 @@ export function ConnectionSelector(): React.ReactElement {
 
     setIsRefreshing(true);
     try {
-      const token = await getAccessTokenSilently({
-        authorizationParams: {
-          audience:
-            import.meta.env.VITE_AUTH0_KTRLPLANE_AUDIENCE ||
-            "https://ktrlplane.konnektr.io",
-        },
-      });
-      const resources = await fetchGraphResources(token);
-      setKtrlPlaneConnections(resources);
+      let token: string | undefined;
+      try {
+        token = await getAccessTokenSilently({
+          authorizationParams: {
+            audience:
+              import.meta.env.VITE_AUTH0_KTRLPLANE_AUDIENCE ||
+              "https://ktrlplane.konnektr.io",
+          },
+        });
+      } catch (silentError) {
+        console.warn("Silent auth failed, trying popup:", silentError);
+        // If silent auth fails (e.g., missing refresh token), try popup
+        token = await getAccessTokenWithPopup({
+          authorizationParams: {
+            audience:
+              import.meta.env.VITE_AUTH0_KTRLPLANE_AUDIENCE ||
+              "https://ktrlplane.konnektr.io",
+          },
+        });
+      }
+      if (typeof token === "string" && token.length > 0) {
+        const resources = await fetchGraphResources(token);
+        setKtrlPlaneConnections(resources);
+      } else {
+        console.warn(
+          "No valid KtrlPlane token received. Skipping resource fetch."
+        );
+        setKtrlPlaneConnections([]);
+      }
     } catch (error) {
       console.error("Failed to refresh KtrlPlane resources:", error);
+      setKtrlPlaneConnections([]);
     } finally {
       setIsRefreshing(false);
     }
