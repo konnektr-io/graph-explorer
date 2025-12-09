@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { GlobalErrorToaster } from "@/components/GlobalErrorToaster";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { ThemeProvider } from "@/components/theme-provider";
 import { GraphHeader } from "@/components/layout/GraphHeader";
@@ -85,6 +86,7 @@ function App() {
   return (
     <KtrlPlaneAuthProvider>
       <ThemeProvider defaultTheme="system" storageKey="konnektr-graph-theme">
+        <GlobalErrorToaster />
         <div className="h-screen w-full flex flex-col bg-background text-foreground">
           {/* Header */}
           <GraphHeader />
