@@ -14,7 +14,7 @@ export class MsalTokenCredential implements TokenCredential {
   private msalInstance: PublicClientApplication;
   private scopes: string[];
   private isInitialized = false;
-  private isRedirecting = false;
+  // No longer need isRedirecting for popup flow
 
   constructor(config: AuthConfig) {
     if (!config.clientId || !config.tenantId) {
@@ -48,9 +48,7 @@ export class MsalTokenCredential implements TokenCredential {
 
     await this.msalInstance.initialize();
 
-    // Handle redirect promise on page load
-    const resp = await this.msalInstance.handleRedirectPromise();
-    console.log("MSAL redirect response:", resp);
+    // No redirect handling needed for popup flow
 
     this.isInitialized = true;
   }
@@ -70,26 +68,34 @@ export class MsalTokenCredential implements TokenCredential {
     const accounts = this.msalInstance.getAllAccounts();
 
     if (accounts.length === 0) {
-      // No user signed in, trigger interactive login
-      if (this.isRedirecting) {
-        // Already redirecting, don't trigger another redirect
-        throw new Error("Authentication in progress - redirecting to sign in");
-      }
-
-      this.isRedirecting = true;
-      console.log("No MSAL accounts found, triggering login redirect...");
-
+      // No user signed in, trigger interactive login via popup
+      console.log("No MSAL accounts found, triggering login popup...");
       try {
-        await this.msalInstance.loginRedirect({
+        const loginResult = await this.msalInstance.loginPopup({
           scopes: this.scopes,
         });
+        // Use the account
+        const account =
+          loginResult.account ||
+          this.msalInstance.getAllAccounts()?.[0] ||
+          null;
+        if (!account) {
+          throw new Error("No account available after login");
+        }
+        // Acquire token for the account
+        const result = await this.msalInstance.acquireTokenSilent({
+          scopes: this.scopes,
+          account,
+        });
+        return {
+          token: result.accessToken,
+          expiresOnTimestamp:
+            result.expiresOn?.getTime() || Date.now() + 3600000,
+        };
       } catch (error) {
-        this.isRedirecting = false;
+        console.error("MSAL loginPopup failed:", error);
         throw error;
       }
-
-      // Redirect happens, token will be acquired after redirect
-      throw new Error("Redirecting to sign in...");
     }
 
     const account = accounts[0];
@@ -114,30 +120,21 @@ export class MsalTokenCredential implements TokenCredential {
     } catch (error) {
       if (error instanceof InteractionRequiredAuthError) {
         console.warn("Interaction required for token refresh:", error);
-
-        // Check if we're already redirecting to avoid loops
-        if (this.isRedirecting) {
-          throw new Error(
-            "Authentication in progress - token refresh required"
-          );
-        }
-
-        this.isRedirecting = true;
-
         try {
-          // Silent acquisition failed, trigger interactive
-          await this.msalInstance.acquireTokenRedirect({
+          // Silent acquisition failed, trigger interactive via popup
+          const popupResult = await this.msalInstance.acquireTokenPopup({
             scopes: this.scopes,
             account,
           });
-        } catch (redirectError) {
-          this.isRedirecting = false;
-          throw redirectError;
+          return {
+            token: popupResult.accessToken,
+            expiresOnTimestamp:
+              popupResult.expiresOn?.getTime() || Date.now() + 3600000,
+          };
+        } catch (popupError) {
+          console.error("MSAL acquireTokenPopup failed:", popupError);
+          throw popupError;
         }
-
-        // Note: acquireTokenRedirect doesn't return a result, it redirects
-        // Token will be acquired after redirect
-        throw new Error("Redirecting for token refresh...");
       }
 
       console.error("Token acquisition failed:", error);
@@ -151,7 +148,7 @@ export class MsalTokenCredential implements TokenCredential {
   async logout(): Promise<void> {
     const accounts = this.msalInstance.getAllAccounts();
     if (accounts.length > 0) {
-      await this.msalInstance.logoutRedirect({
+      await this.msalInstance.logoutPopup({
         account: accounts[0],
       });
     }
