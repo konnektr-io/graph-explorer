@@ -1,5 +1,12 @@
 import { useState, useEffect } from "react";
-import { Search, Plus, Layers, Trash2, PlusSquare } from "lucide-react";
+import {
+  Search,
+  Plus,
+  Layers,
+  Trash2,
+  PlusSquare,
+  RefreshCw,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -157,8 +164,6 @@ function buildModelTree(
   return rootModels.map((model) => buildNode(model));
 }
 
-
-
 export function ModelSidebar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -167,7 +172,9 @@ export function ModelSidebar() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importMode, setImportMode] = useState<"paste" | "upload">("paste");
   const [createTwinDialogOpen, setCreateTwinDialogOpen] = useState(false);
-  const [createTwinModelId, setCreateTwinModelId] = useState<string | null>(null);
+  const [createTwinModelId, setCreateTwinModelId] = useState<string | null>(
+    null
+  );
 
   const selectedItem = useInspectorStore((state) => state.selectedItem);
   const selectItem = useInspectorStore((state) => state.selectItem);
@@ -202,9 +209,9 @@ export function ModelSidebar() {
   useEffect(() => {
     if (currentConnection) {
       loadModels(getAccessTokenSilently, getTokenWithPopup);
-      loadTwinCounts({ 
-        getAccessTokenSilently, 
-        getAccessTokenWithPopup: getTokenWithPopup 
+      loadTwinCounts({
+        getAccessTokenSilently,
+        getAccessTokenWithPopup: getTokenWithPopup,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -212,7 +219,7 @@ export function ModelSidebar() {
 
   // Only show full loading state if models are loading
   // Twins loading is treated as background refresh if models are already there
-  const isLoading = modelsLoading; 
+  const isLoading = modelsLoading;
   // Only block UI if models failed to load
   const error = modelsError;
 
@@ -252,7 +259,7 @@ export function ModelSidebar() {
 
   const handleImportClick = () => {
     // Default to paste mode, but dialog opens and remembers or resets
-    setImportMode("paste"); 
+    setImportMode("paste");
     setImportDialogOpen(true);
   };
 
@@ -311,6 +318,23 @@ export function ModelSidebar() {
                 variant="ghost"
                 size="sm"
                 className="p-1.5"
+                onClick={() => {
+                  loadModels(getAccessTokenSilently, getTokenWithPopup);
+                  loadTwinCounts({
+                    getAccessTokenSilently,
+                    getAccessTokenWithPopup: getTokenWithPopup,
+                  });
+                }}
+                title="Refresh Models"
+                aria-label="Refresh Models"
+              >
+                <RefreshCw className="w-3 h-3" />
+                <span className="sr-only">Refresh Models</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="p-1.5"
                 onClick={handleImportClick}
                 title="Import Models"
               >
@@ -340,17 +364,23 @@ export function ModelSidebar() {
               {/* Twins Loading/Error Warning */}
               {twinsError && !isLoading && (
                 <div className="mb-2 p-2 text-xs bg-muted text-muted-foreground rounded border border-border flex flex-col gap-1">
-                  <span className="font-semibold text-destructive">Digital Twins Error</span>
-                  <span className="truncate" title={twinsError}>{twinsError}</span>
+                  <span className="font-semibold text-destructive">
+                    Digital Twins Error
+                  </span>
+                  <span className="truncate" title={twinsError}>
+                    {twinsError}
+                  </span>
                   <Button
-                      variant="link"
-                      className="h-auto p-0 text-xs self-start"
-                      onClick={() => loadTwinCounts({ 
-                        getAccessTokenSilently, 
-                        getAccessTokenWithPopup: getTokenWithPopup 
-                      })}
-                    >
-                      Retry
+                    variant="link"
+                    className="h-auto p-0 text-xs self-start"
+                    onClick={() =>
+                      loadTwinCounts({
+                        getAccessTokenSilently,
+                        getAccessTokenWithPopup: getTokenWithPopup,
+                      })
+                    }
+                  >
+                    Retry
                   </Button>
                 </div>
               )}
@@ -381,9 +411,9 @@ export function ModelSidebar() {
                       size="sm"
                       onClick={() => {
                         loadModels(getAccessTokenSilently, getTokenWithPopup);
-                        loadTwinCounts({ 
-                          getAccessTokenSilently, 
-                          getAccessTokenWithPopup: getTokenWithPopup 
+                        loadTwinCounts({
+                          getAccessTokenSilently,
+                          getAccessTokenWithPopup: getTokenWithPopup,
                         });
                       }}
                       className="mt-2"
