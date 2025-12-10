@@ -7,7 +7,6 @@ import {
   FileCode2,
   X,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -19,7 +18,6 @@ import { useInspectorStore } from "@/stores/inspectorStore";
 export function Inspector() {
   const selectedItem = useInspectorStore((state) => state.selectedItem);
   const clearSelection = useInspectorStore((state) => state.clearSelection);
-  const [searchQuery, setSearchQuery] = useState("");
 
   if (!selectedItem) {
     return (
@@ -93,19 +91,6 @@ export function Inspector() {
         >
           <X className="w-3 h-3" />
         </Button>
-      </div>
-
-      {/* Search */}
-      <div className="p-4 border-b">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search properties..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-8 text-sm"
-          />
-        </div>
       </div>
 
       {/* Content */}
