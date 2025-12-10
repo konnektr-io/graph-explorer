@@ -43,6 +43,9 @@ export interface Connection {
   isKtrlPlaneManaged?: boolean;
   ktrlPlaneResourceId?: string;
   ktrlPlaneProjectId?: string;
+
+  // KtrlPlane resource status (optional, only for managed connections)
+  status?: string;
 }
 
 interface ConnectionState {
@@ -218,6 +221,7 @@ export const useConnectionStore = create<ConnectionState>()(
             isKtrlPlaneManaged: true,
             ktrlPlaneResourceId: resource.resource_id,
             ktrlPlaneProjectId: resource.project_id,
+            status: resource.status, // Add status property
           };
         });
         set({ ktrlPlaneConnections: connections });

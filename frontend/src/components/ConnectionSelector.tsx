@@ -98,6 +98,15 @@ export function ConnectionSelector(): React.ReactElement {
     handleRefresh();
   }, [isAuthenticated]);
 
+  // Poll KtrlPlane resources every 30s while authenticated
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const interval = setInterval(() => {
+      handleRefresh();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
+
   const handleRefresh = async () => {
     if (!isAuthenticated) return;
 
@@ -299,18 +308,37 @@ export function ConnectionSelector(): React.ReactElement {
           {ktrlPlaneConnections.length > 0 && (
             <SelectGroup>
               <SelectLabel>Konnektr Managed</SelectLabel>
-              {ktrlPlaneConnections.map((conn) => (
-                <SelectItem key={conn.id} value={conn.id}>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{conn.name}</span>
-                    {conn.ktrlPlaneProjectId && (
-                      <span className="text-xs text-muted-foreground">
-                        {conn.ktrlPlaneProjectId}
+              {ktrlPlaneConnections.map((conn) => {
+                const isHealthy = conn.status === "Healthy";
+                return (
+                  <SelectItem
+                    key={conn.id}
+                    value={conn.id}
+                    disabled={!isHealthy}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{conn.name}</span>
+                      {conn.ktrlPlaneProjectId && (
+                        <span className="text-xs text-muted-foreground">
+                          {conn.ktrlPlaneProjectId}
+                        </span>
+                      )}
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded font-semibold ${
+                          isHealthy
+                            ? "bg-green-100 text-green-800"
+                            : conn.status === "Progressing"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                        title={conn.status}
+                      >
+                        {conn.status}
                       </span>
-                    )}
-                  </div>
-                </SelectItem>
-              ))}
+                    </div>
+                  </SelectItem>
+                );
+              })}
             </SelectGroup>
           )}
           <SelectGroup>
