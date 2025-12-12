@@ -218,6 +218,10 @@ export class KtrlPlaneGraphTokenCredential implements TokenCredential {
   private getAccessTokenWithPopup: (options?: {
     authorizationParams?: { audience?: string; scope?: string };
   }) => Promise<string>;
+  private pendingTokenRequest: Promise<{
+    token: string;
+    expiresOnTimestamp: number;
+  }> | null = null;
 
   constructor(
     getAccessTokenSilently: (options?: {
@@ -234,36 +238,26 @@ export class KtrlPlaneGraphTokenCredential implements TokenCredential {
   /**
    * Get access token for Graph API (with graph audience)
    * Falls back to popup if silent acquisition fails
+   * Uses singleton pattern to prevent concurrent popup attempts
    */
   async getToken(): Promise<{ token: string; expiresOnTimestamp: number }> {
+    // If there's already a pending token request, wait for it
+    if (this.pendingTokenRequest) {
+      console.log("Reusing pending KtrlPlane token request");
+      return this.pendingTokenRequest;
+    }
+
     const audience =
       import.meta.env.VITE_AUTH0_GRAPH_AUDIENCE || "https://graph.konnektr.io";
     const scope =
       import.meta.env.VITE_AUTH0_GRAPH_SCOPE ||
       "https://graph.konnektr.io/default";
 
-    try {
-      // Try silent first
-      const token = await this.getAccessTokenSilently({
-        authorizationParams: {
-          audience,
-          scope,
-        },
-      });
-
-      return {
-        token,
-        expiresOnTimestamp: Date.now() + 3600000,
-      };
-    } catch (silentError) {
-      console.warn(
-        "Silent token acquisition failed, trying popup:",
-        silentError
-      );
-
+    // Create a new pending request
+    this.pendingTokenRequest = (async () => {
       try {
-        // Fallback to popup if silent fails (e.g., missing refresh token)
-        const token = await this.getAccessTokenWithPopup({
+        // Try silent first
+        const token = await this.getAccessTokenSilently({
           authorizationParams: {
             audience,
             scope,
@@ -274,13 +268,38 @@ export class KtrlPlaneGraphTokenCredential implements TokenCredential {
           token,
           expiresOnTimestamp: Date.now() + 3600000,
         };
-      } catch (popupError) {
-        console.error("Failed to get KtrlPlane Graph token:", popupError);
-        throw new Error(
-          "Authentication required. Please sign in to KtrlPlane."
+      } catch (silentError) {
+        console.warn(
+          "Silent token acquisition failed, trying popup:",
+          silentError
         );
+
+        try {
+          // Fallback to popup if silent fails (e.g., missing refresh token)
+          const token = await this.getAccessTokenWithPopup({
+            authorizationParams: {
+              audience,
+              scope,
+            },
+          });
+
+          return {
+            token,
+            expiresOnTimestamp: Date.now() + 3600000,
+          };
+        } catch (popupError) {
+          console.error("Failed to get KtrlPlane Graph token:", popupError);
+          throw new Error(
+            "Authentication required. Please sign in to KtrlPlane."
+          );
+        }
+      } finally {
+        // Clear pending request after completion (success or failure)
+        this.pendingTokenRequest = null;
       }
-    }
+    })();
+
+    return this.pendingTokenRequest;
   }
 }
 

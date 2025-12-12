@@ -177,19 +177,7 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
         });
       } catch (error) {
         console.error("Error loading twins:", error);
-        let errorMessage = "Failed to load twins";
-
-        if (error instanceof Error) {
-          errorMessage = error.message;
-        } else if (typeof error === "object" && error !== null) {
-          // Handle API error responses
-          const apiError = error as any;
-          if (apiError.statusCode) {
-            errorMessage = `API Error ${apiError.statusCode}: ${
-              apiError.message || "Unknown error"
-            }`;
-          }
-        }
+        const errorMessage = formatApiError(error, "Failed to load twins");
 
         set({
           error: errorMessage,
@@ -244,9 +232,8 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
         set({ twinCounts: counts, error: null });
       } catch (error) {
            console.error("Failed to load twin counts", error);
-           set({ 
-               error: error instanceof Error ? error.message : "Failed to load twin counts" 
-           });
+           const errorMessage = formatApiError(error, "Failed to load twin counts");
+           set({ error: errorMessage });
       }
     },
 

@@ -10,6 +10,7 @@ import type {
 } from "@/types";
 import { digitalTwinsClientFactory } from "@/services/digitalTwinsClientFactory";
 import { useConnectionStore } from "./connectionStore";
+import { formatApiError } from "@/utils/errorHelpers";
 
 /**
  * Helper to get initialized Digital Twins client
@@ -153,21 +154,7 @@ export const useModelsStore = create<ModelsState>()(
         get().validateAllModels();
       } catch (error) {
         console.error("Error loading models:", error);
-        let errorMessage = "Failed to load models";
-
-        if (error instanceof Error) {
-          errorMessage = error.message;
-        } else if (typeof error === "object" && error !== null) {
-          // Handle API error responses
-          const apiError = error as any;
-          if (apiError.statusCode) {
-            errorMessage = `API Error ${apiError.statusCode}: ${
-              apiError.message || "Unknown error"
-            }`;
-          } else if (apiError.message) {
-            errorMessage = apiError.message;
-          }
-        }
+        const errorMessage = formatApiError(error, "Failed to load models");
 
         set({
           error: errorMessage,

@@ -33,14 +33,28 @@ function App() {
   useEffect(() => {
     console.log("App mounted, currentConnectionId:", currentConnectionId);
     if (currentConnectionId) {
-      console.log("Initializing connection:", currentConnectionId);
-      setCurrentConnection(currentConnectionId)
-        .then(() => {
-          console.log("Connection initialized successfully");
-        })
-        .catch((error) => {
-          console.error("Failed to initialize connection:", error);
-        });
+      // Check if the connection actually exists before trying to initialize
+      const { getAllConnections } = useConnectionStore.getState();
+      const allConnections = getAllConnections();
+      const connectionExists = allConnections.some(
+        (c) => c.id === currentConnectionId
+      );
+
+      if (connectionExists) {
+        console.log("Initializing connection:", currentConnectionId);
+        setCurrentConnection(currentConnectionId)
+          .then(() => {
+            console.log("Connection initialized successfully");
+          })
+          .catch((error) => {
+            console.error("Failed to initialize connection:", error);
+          });
+      } else {
+        console.log(
+          "Persisted connection not found (may load later from KtrlPlane):",
+          currentConnectionId
+        );
+      }
     } else {
       console.log("No connection to initialize");
     }

@@ -45,6 +45,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 export function ConnectionSelector(): React.ReactElement {
   const ktrlPlaneConnections = useConnectionStore(
@@ -94,8 +95,11 @@ export function ConnectionSelector(): React.ReactElement {
   });
   const [error, setError] = useState<string | null>(null);
 
+  // Initial fetch and auto-select on auth
   useEffect(() => {
-    handleRefresh();
+    if (isAuthenticated) {
+      handleRefresh();
+    }
   }, [isAuthenticated]);
 
   // Poll KtrlPlane resources every 30s while authenticated
@@ -124,25 +128,73 @@ export function ConnectionSelector(): React.ReactElement {
       } catch (silentError) {
         console.warn("Silent auth failed, trying popup:", silentError);
         // If silent auth fails (e.g., missing refresh token), try popup
-        token = await getAccessTokenWithPopup({
-          authorizationParams: {
-            audience:
-              import.meta.env.VITE_AUTH0_KTRLPLANE_AUDIENCE ||
-              "https://ktrlplane.konnektr.io",
-          },
-        });
+        try {
+          token = await getAccessTokenWithPopup({
+            authorizationParams: {
+              audience:
+                import.meta.env.VITE_AUTH0_KTRLPLANE_AUDIENCE ||
+                "https://ktrlplane.konnektr.io",
+            },
+          });
+        } catch (popupError: any) {
+          // Handle popup blocker or user cancellation
+          if (popupError?.message?.includes("window.open returned `null`")) {
+            toast.error("Popup blocked: Please allow popups and try again");
+          } else if (
+            popupError?.message?.includes("cancelled") ||
+            popupError?.error === "access_denied"
+          ) {
+            // User cancelled, silently ignore
+            console.log("User cancelled authentication");
+          } else {
+            toast.error(
+              "Failed to authenticate: " +
+                (popupError?.message || "Unknown error")
+            );
+          }
+          setIsRefreshing(false);
+          return;
+        }
       }
       if (typeof token === "string" && token.length > 0) {
         const resources = await fetchGraphResources(token);
         setKtrlPlaneConnections(resources);
+
+        // Auto-select first connection if no valid connection is currently set
+        if (resources.length > 0) {
+          const {
+            currentConnectionId,
+            getAllConnections,
+            setCurrentConnection,
+          } = useConnectionStore.getState();
+          const allConnections = getAllConnections();
+          const currentConnectionExists = allConnections.some(
+            (c) => c.id === currentConnectionId
+          );
+
+          if (!currentConnectionId || !currentConnectionExists) {
+            console.log(
+              "Auto-selecting first KtrlPlane connection:",
+              resources[0].name
+            );
+            await setCurrentConnection(`ktrlplane-${resources[0].resource_id}`);
+          }
+        }
       } else {
         console.warn(
           "No valid KtrlPlane token received. Skipping resource fetch."
         );
         setKtrlPlaneConnections([]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to refresh KtrlPlane resources:", error);
+      // Only show toast for unexpected errors (not auth cancellations)
+      if (
+        !error?.message?.includes("cancelled") &&
+        error?.error !== "access_denied"
+      ) {
+        toast.error("Failed to load KtrlPlane resources");
+      }
       setKtrlPlaneConnections([]);
     } finally {
       setIsRefreshing(false);
