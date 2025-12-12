@@ -1,4 +1,5 @@
 import { forwardRef, useImperativeHandle, useRef } from "react";
+import { useTheme } from "next-themes";
 import Editor, { type EditorProps, type OnMount } from "@monaco-editor/react";
 import * as monaco from "monaco-editor";
 
@@ -14,8 +15,12 @@ export interface MonacoEditorRef {
 }
 
 export const MonacoEditor = forwardRef<MonacoEditorRef, MonacoEditorProps>(
+
   (props, ref) => {
     const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
+    const { resolvedTheme } = useTheme();
+    // Determine Monaco theme based on resolvedTheme
+    let monacoTheme: string = resolvedTheme === "light" ? "vs" : "vs-dark";
 
     useImperativeHandle(ref, () => ({
       getAction: (actionId: string) => {
@@ -321,8 +326,9 @@ export const MonacoEditor = forwardRef<MonacoEditorRef, MonacoEditorProps>(
       <Editor
         {...props}
         onMount={handleEditorDidMount}
+        theme={monacoTheme}
         options={{
-          theme: "vs-dark",
+          fontFamily: "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
           fontSize: 14,
           lineNumbers: "on",
           wordWrap: "on",

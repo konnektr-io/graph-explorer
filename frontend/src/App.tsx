@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { GlobalErrorToaster } from "@/components/GlobalErrorToaster";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
-import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeProvider } from "next-themes";
 import { GraphHeader } from "@/components/layout/GraphHeader";
 import { ModelSidebar } from "@/components/layout/ModelSidebar";
 import { MainContent } from "@/components/layout/MainContent";
@@ -99,7 +99,7 @@ function App() {
 
   return (
     <KtrlPlaneAuthProvider>
-      <ThemeProvider defaultTheme="system" storageKey="konnektr-graph-theme">
+      <ThemeProvider attribute="class" defaultTheme="system" storageKey="konnektr-graph-theme">
         <GlobalErrorToaster />
         <div className="h-screen w-full flex flex-col bg-background text-foreground">
           {/* Header */}
