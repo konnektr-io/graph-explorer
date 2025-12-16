@@ -103,6 +103,7 @@ export const digitalTwinsClientFactory = async (
       tokenCredential = await getTokenCredential(connection);
     }
 
+    // Only throw if tokenCredential is missing and authProvider is not 'none'
     if (!tokenCredential) {
       throw new Error("No authentication configured for this connection");
     }

@@ -578,9 +578,11 @@ export function ConnectionSelector(): React.ReactElement {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">None (Local/Proxy)</SelectItem>
+                      <SelectItem value="none">
+                        None (Demo/Local/Proxy)
+                      </SelectItem>
                       <SelectItem value="msal">
-                        MSAL (Azure Digital Twins)
+                        MS Entra (Azure Digital Twins)
                       </SelectItem>
                       <SelectItem value="auth0">
                         Auth0 (Konnektr Graph Self-Hosted)
@@ -591,7 +593,7 @@ export function ConnectionSelector(): React.ReactElement {
                     {form.authProvider === "none" &&
                       "No authentication required"}
                     {form.authProvider === "msal" &&
-                      "Azure AD authentication with PKCE"}
+                      "Azure Entra authentication with PKCE"}
                     {form.authProvider === "auth0" && "Auth0 authentication"}
                   </p>
                 </div>

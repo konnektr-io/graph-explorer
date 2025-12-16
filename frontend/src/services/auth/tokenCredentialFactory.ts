@@ -318,7 +318,14 @@ export async function getTokenCredential(
   const { authProvider, authConfig } = connection;
 
   if (authProvider === "none") {
-    return null; // No authentication required
+    // If authProvider is 'none', use a dummy credential
+    const tokenCredential = {
+      getToken: async () => ({
+        token: "",
+        expiresOnTimestamp: Date.now() + 3600000,
+      }),
+    };
+    return tokenCredential;
   }
 
   if (authProvider === "msal") {
