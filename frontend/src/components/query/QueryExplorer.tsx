@@ -122,7 +122,6 @@ export function QueryExplorer() {
                     options={{
                       minimap: { enabled: false },
                       fontSize: 14,
-                      lineNumbers: "on",
                       wordWrap: "on",
                       automaticLayout: true,
                       scrollBeyondLastLine: false,
