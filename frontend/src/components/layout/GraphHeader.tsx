@@ -181,7 +181,7 @@ export function GraphHeader() {
                     </AvatarFallback>
                   </Avatar>
                   <span className="hidden md:inline text-sm">
-                    {user?.email || user?.name || "User"}
+                    {user?.email || user?.nickname || "User"}
                   </span>
                 </Button>
               </DropdownMenuTrigger>
@@ -189,9 +189,11 @@ export function GraphHeader() {
                 {isAuthenticated ? (
                   <>
                     <DropdownMenuItem disabled className="flex-col items-start">
-                      <div className="font-medium">{user?.name}</div>
+                      <div className="font-medium">
+                        {user?.name || user?.nickname}
+                      </div>
                       <div className="text-xs text-muted-foreground">
-                        {user?.email}
+                        {user?.email || user?.sub}
                       </div>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
