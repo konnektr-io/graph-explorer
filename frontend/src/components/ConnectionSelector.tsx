@@ -37,6 +37,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Trash2, MoreVertical, RefreshCw, Pencil } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useAuth0 } from "@auth0/auth0-react";
 import { fetchGraphResources } from "@/services/ktrlplaneClient";
 import {
@@ -399,18 +400,27 @@ export function ConnectionSelector(): React.ReactElement {
                 ? "Custom Connections"
                 : "Connections"}
             </SelectLabel>
-            {localConnections.map((conn) => (
-              <SelectItem key={conn.id} value={conn.id}>
-                <div className="flex items-center gap-2">
-                  <span>{conn.name}</span>
-                  {conn.authProvider !== "none" && (
-                    <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-secondary">
-                      {conn.authProvider}
-                    </span>
-                  )}
-                </div>
-              </SelectItem>
-            ))}
+            {localConnections.map((conn) => {
+              const isDemo =
+                conn.authProvider === "none" &&
+                (conn.name?.toLowerCase().includes("demo") ||
+                  conn.adtHost === "demo.api.graph.konnektr.io");
+              return (
+                <SelectItem key={conn.id} value={conn.id}>
+                  <div className="flex items-center gap-2">
+                    <span>{conn.name}</span>
+                    {isDemo && (
+                      <Badge variant="secondary">Demo</Badge>
+                    )}
+                    {conn.authProvider !== "none" && (
+                      <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-secondary">
+                        {conn.authProvider}
+                      </span>
+                    )}
+                  </div>
+                </SelectItem>
+              );
+            })}
           </SelectGroup>
         </SelectContent>
       </Select>
