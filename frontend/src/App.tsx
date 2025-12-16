@@ -14,6 +14,40 @@ import { CookieConsent } from "@/components/cookie-consent";
 import { KtrlPlaneAuthProvider } from "@/components/KtrlPlaneAuthProvider";
 
 function App() {
+  const addConnection = useConnectionStore((state) => state.addConnection);
+  const getAllConnections = useConnectionStore(
+    (state) => state.getAllConnections
+  );
+
+  // Auto-add demo connection from query param if needed
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const adtHost = params.get("x-adt-host");
+    if (adtHost) {
+      // Check if connection already exists for this host
+      const allConnections = getAllConnections();
+      const existing = allConnections.find((c) => c.adtHost === adtHost);
+      if (!existing) {
+        // Add demo connection
+        const demoConn = {
+          id: "demo",
+          name: adtHost === "demo.api.graph.konnektr.io" ? "Demo" : adtHost,
+          adtHost,
+          authProvider: "none" as const,
+        };
+        addConnection(demoConn);
+        setCurrentConnection(demoConn.id);
+      } else {
+        // Auto-select if not already selected
+        if (currentConnectionId !== existing.id) {
+          setCurrentConnection(existing.id);
+        }
+      }
+    }
+    // Only run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const {
     showLeftPanel,
     showRightPanel,
@@ -29,37 +63,38 @@ function App() {
     (state) => state.setCurrentConnection
   );
 
-  // Initialize connection on app start if we have a saved connection
+  // Initialize connection on app start if we have a saved connection (but not if we just auto-selected demo)
   useEffect(() => {
-    console.log("App mounted, currentConnectionId:", currentConnectionId);
+    // If we just set a demo connection above, skip this effect
+    // (otherwise, it would immediately re-select the old persisted connection)
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const adtHost = params.get("x-adt-host");
+    const allConnections = getAllConnections();
+    if (adtHost) {
+      const demoConn = allConnections.find((c) => c.adtHost === adtHost);
+      if (demoConn && currentConnectionId === demoConn.id) {
+        // Already selected demo, skip
+        return;
+      }
+    }
+    // Fallback to persisted connection logic
     if (currentConnectionId) {
-      // Check if the connection actually exists before trying to initialize
-      const { getAllConnections } = useConnectionStore.getState();
-      const allConnections = getAllConnections();
       const connectionExists = allConnections.some(
         (c) => c.id === currentConnectionId
       );
-
       if (connectionExists) {
-        console.log("Initializing connection:", currentConnectionId);
         setCurrentConnection(currentConnectionId)
           .then(() => {
-            console.log("Connection initialized successfully");
+            // ...existing code...
           })
-          .catch((error) => {
-            console.error("Failed to initialize connection:", error);
+          .catch(() => {
+            // ...existing code...
           });
-      } else {
-        console.log(
-          "Persisted connection not found (may load later from KtrlPlane):",
-          currentConnectionId
-        );
       }
-    } else {
-      console.log("No connection to initialize");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run once on mount
+  }, []);
 
   // Set GTM consent using gtag API
   const setGtmConsent = (consent: "accepted" | "declined") => {
@@ -99,7 +134,11 @@ function App() {
 
   return (
     <KtrlPlaneAuthProvider>
-      <ThemeProvider attribute="class" defaultTheme="system" storageKey="konnektr-graph-theme">
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        storageKey="konnektr-graph-theme"
+      >
         <GlobalErrorToaster />
         <div className="h-screen w-full flex flex-col bg-background text-foreground">
           {/* Header */}
