@@ -328,9 +328,10 @@ export const MonacoEditor = forwardRef<MonacoEditorRef, MonacoEditorProps>(
         onMount={handleEditorDidMount}
         theme={monacoTheme}
         options={{
-          fontFamily: "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+          fontFamily:
+            "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
           fontSize: 14,
-          lineNumbers: "on",
+          lineNumbers: "off",
           wordWrap: "on",
           automaticLayout: true,
           scrollBeyondLastLine: false,
