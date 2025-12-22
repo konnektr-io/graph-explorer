@@ -1,4 +1,5 @@
 import { forwardRef, useImperativeHandle, useRef } from "react";
+import { ensureFontsLoaded } from "@/utils/ensureFontsLoaded";
 import { useTheme } from "next-themes";
 import Editor, { type EditorProps, type OnMount } from "@monaco-editor/react";
 import * as monaco from "monaco-editor";
@@ -15,7 +16,6 @@ export interface MonacoEditorRef {
 }
 
 export const MonacoEditor = forwardRef<MonacoEditorRef, MonacoEditorProps>(
-
   (props, ref) => {
     const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
     const { resolvedTheme } = useTheme();
@@ -39,6 +39,11 @@ export const MonacoEditor = forwardRef<MonacoEditorRef, MonacoEditorProps>(
 
     const handleEditorDidMount: OnMount = (editor, monaco) => {
       editorRef.current = editor;
+      // Ensure fonts are loaded and remeasure Monaco fonts to fix cursor misalignment
+      ensureFontsLoaded(() => {
+        // Optionally, you could force a layout if needed:
+        editor.layout();
+      });
 
       // Configure Cypher language support
       monaco.languages.register({ id: "cypher" });

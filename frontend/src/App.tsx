@@ -106,7 +106,7 @@ function App() {
   }, []);
 
   // Set GTM consent using gtag API
-  const setGtmConsent = (consent: "accepted" | "declined") => {
+  const setConsent = (consent: "accepted" | "declined") => {
     if (typeof window !== "undefined") {
       // Declare window.gtag for TypeScript
       type GtagFn = (
@@ -128,17 +128,36 @@ function App() {
           });
         }
       }
+      type ClarityFn = (
+        command: string,
+        params: Record<string, string>
+      ) => void;
+      const clarity = (window as typeof window & { clarity?: ClarityFn })
+        .clarity;
+      if (clarity) {
+        if (consent === "accepted") {
+          clarity("consentv2", {
+            ad_Storage: "granted",
+            analytics_Storage: "granted",
+          });
+        } else {
+          clarity("consentv2", {
+            ad_Storage: "denied",
+            analytics_Storage: "denied",
+          });
+        }
+      }
     }
   };
 
   // Callback for accepting cookies
   const handleAccept = () => {
-    setGtmConsent("accepted");
+    setConsent("accepted");
   };
 
   // Callback for declining cookies
   const handleDecline = () => {
-    setGtmConsent("declined");
+    setConsent("declined");
   };
 
   return (

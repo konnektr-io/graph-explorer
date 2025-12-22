@@ -14,6 +14,30 @@ import {
   getEntityType,
 } from "@/utils/dataStructureDetector";
 
+// Collect all unique property keys for each entity column across all rows
+function getAllEntityPropertiesByColumn(results: unknown[], entityColumns: string[]) {
+  const map: Record<string, Set<string>> = {};
+  for (const col of entityColumns) {
+    map[col] = new Set();
+  }
+  for (const row of results) {
+    if (typeof row !== "object" || row === null) continue;
+    for (const col of entityColumns) {
+      const entity = (row as Record<string, unknown>)[col];
+      const props = getEntityProperties(entity);
+      for (const [key] of props) {
+        map[col].add(key);
+      }
+    }
+  }
+  // Convert sets to sorted arrays for stable rendering
+  const result: Record<string, string[]> = {};
+  for (const col of entityColumns) {
+    result[col] = Array.from(map[col]).sort();
+  }
+  return result;
+}
+
 interface GroupedColumnsViewProps {
   results: unknown[];
   expandedColumns: Record<string, boolean>;
@@ -28,6 +52,7 @@ export function GroupedColumnsView({
   onEntityClick,
 }: GroupedColumnsViewProps) {
   const entityColumns = getEntityColumns(results);
+  const allEntityProps = getAllEntityPropertiesByColumn(results, entityColumns);
 
   return (
     <Table>
@@ -35,13 +60,12 @@ export function GroupedColumnsView({
         {/* Entity headers with expand/collapse */}
         <TableRow>
           {entityColumns.map((entityKey) => {
-            const firstRow = results[0];
-            if (typeof firstRow !== "object" || firstRow === null) return null;
-            const firstEntity = (firstRow as Record<string, unknown>)[
-              entityKey
-            ];
+            const firstRow = results.find(
+              (row) => typeof row === "object" && row !== null && (row as Record<string, unknown>)[entityKey]
+            );
+            const firstEntity = firstRow ? (firstRow as Record<string, unknown>)[entityKey] : undefined;
             const entityType = getEntityType(firstEntity);
-            const properties = getEntityProperties(firstEntity);
+            const properties = allEntityProps[entityKey];
             const isExpanded = expandedColumns[entityKey] ?? false;
 
             return (
@@ -75,16 +99,11 @@ export function GroupedColumnsView({
         {/* Property headers */}
         <TableRow>
           {entityColumns.map((entityKey) => {
-            const firstRow = results[0];
-            if (typeof firstRow !== "object" || firstRow === null) return null;
-            const firstEntity = (firstRow as Record<string, unknown>)[
-              entityKey
-            ];
-            const properties = getEntityProperties(firstEntity);
+            const properties = allEntityProps[entityKey];
             const isExpanded = expandedColumns[entityKey] ?? false;
 
             if (isExpanded) {
-              return properties.map(([propKey], propIdx) => (
+              return properties.map((propKey, propIdx) => (
                 <TableHead
                   key={`${entityKey}-${propKey}`}
                   className={`text-xs font-medium ${
@@ -119,47 +138,56 @@ export function GroupedColumnsView({
             <TableRow key={rowIdx} className="hover:bg-muted/50">
               {entityColumns.map((entityKey) => {
                 const entity = (row as Record<string, unknown>)[entityKey];
-                const properties = getEntityProperties(entity);
                 const isExpanded = expandedColumns[entityKey] ?? false;
+                const allProps = allEntityProps[entityKey];
+                const entityProps = getEntityProperties(entity).reduce<Record<string, unknown>>((acc, [k, v]) => {
+                  acc[k] = v;
+                  return acc;
+                }, {});
 
                 if (isExpanded) {
-                  return properties.map(([propKey, propValue], propIdx) => (
-                    <TableCell
-                      key={`${entityKey}-${propKey}`}
-                      className={`text-xs cursor-pointer ${
-                        propIdx === properties.length - 1
-                          ? "border-r border-border"
-                          : "border-r border-border/30"
-                      }`}
-                      onClick={() => onEntityClick(entity, entityKey)}
-                    >
-                      {propKey === "$dtId" ? (
-                        <code className="font-mono text-xs">
-                          {String(propValue)}
-                        </code>
-                      ) : typeof propValue === "boolean" ? (
-                        <Badge
-                          variant={propValue ? "default" : "secondary"}
-                          className="text-xs"
-                        >
-                          {propValue ? "true" : "false"}
-                        </Badge>
-                      ) : typeof propValue === "number" ? (
-                        <span className="font-medium">{propValue}</span>
-                      ) : (
-                        <span>{String(propValue)}</span>
-                      )}
-                    </TableCell>
-                  ));
+                  return allProps.map((propKey, propIdx) => {
+                    const propValue = entityProps[propKey];
+                    return (
+                      <TableCell
+                        key={`${entityKey}-${propKey}`}
+                        className={`text-xs cursor-pointer ${
+                          propIdx === allProps.length - 1
+                            ? "border-r border-border"
+                            : "border-r border-border/30"
+                        }`}
+                        onClick={() => onEntityClick(entity, entityKey)}
+                      >
+                        {propKey === "$dtId" ? (
+                          <code className="font-mono text-xs">
+                            {propValue !== undefined ? String(propValue) : ""}
+                          </code>
+                        ) : typeof propValue === "boolean" ? (
+                          <Badge
+                            variant={propValue ? "default" : "secondary"}
+                            className="text-xs"
+                          >
+                            {propValue ? "true" : "false"}
+                          </Badge>
+                        ) : typeof propValue === "number" ? (
+                          <span className="font-medium">{propValue}</span>
+                        ) : propValue !== undefined ? (
+                          <span>{String(propValue)}</span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                    );
+                  });
                 } else {
-                  const dtId = properties.find(([key]) => key === "$dtId")?.[1];
+                  const dtId = entityProps["$dtId"];
                   return (
                     <TableCell
                       key={entityKey}
                       className="text-muted-foreground text-xs border-r border-border cursor-pointer"
                       onClick={() => onEntityClick(entity, entityKey)}
                     >
-                      <span>{String(dtId)}</span>
+                      <span>{dtId !== undefined ? String(dtId) : ""}</span>
                     </TableCell>
                   );
                 }
