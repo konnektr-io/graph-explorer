@@ -1,0 +1,30 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:healthcare:MedicalDevice;1",
+    "@type": "Interface",
+    "displayName": "Medical Device",
+    "extends": "dtmi:io:konnektr:healthcare:BaseHealthEntity;1",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "deviceName",
+            "schema": "string"
+        },
+        {
+            "@type": "Property",
+            "name": "manufacturer",
+            "schema": "string"
+        },
+        {
+            "@type": "Property",
+            "name": "serialNumber",
+            "schema": "string"
+        },
+        {
+            "@type": "Property",
+            "name": "status",
+            "schema": "string",
+            "description": "online, offline, error"
+        }
+    ]
+}

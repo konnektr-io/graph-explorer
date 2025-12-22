@@ -1,0 +1,31 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:facility:BaseFacilityEntity;1",
+    "@type": "Interface",
+    "displayName": "Base Facility Entity",
+    "description": "Root interface for all facility entities, ensuring consistent metadata and vector search capabilities.",
+    "comment": "Abstract base class.",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "externalId",
+            "schema": "string",
+            "description": "ID from BIM (Building Information Model) or IWMS system."
+        },
+        {
+            "@type": "Property",
+            "name": "description",
+            "schema": "string"
+        },
+        {
+            "@type": "Property",
+            "name": "vectorEmbedding",
+            "displayName": "Vector Embedding",
+            "description": "Embedding of maintenance logs or specifications for semantic search.",
+            "schema": {
+                "@type": "Array",
+                "elementSchema": "double"
+            }
+        }
+    ]
+}

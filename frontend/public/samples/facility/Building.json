@@ -1,0 +1,31 @@
+{
+    "@context": [
+        "dtmi:dtdl:context;3",
+        "dtmi:dtdl:extension:quantitativeTypes;1"
+    ],
+    "@id": "dtmi:io:konnektr:facility:Building;1",
+    "@type": "Interface",
+    "displayName": "Building",
+    "extends": "dtmi:io:konnektr:facility:Space;1",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "address",
+            "schema": "string"
+        },
+        {
+            "@type": [
+                "Property",
+                "Area"
+            ],
+            "name": "grossFloorArea",
+            "schema": "double",
+            "unit": "squareMetre"
+        },
+        {
+            "@type": "Property",
+            "name": "constructionYear",
+            "schema": "integer"
+        }
+    ]
+}

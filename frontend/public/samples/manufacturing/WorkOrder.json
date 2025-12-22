@@ -1,0 +1,34 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:manufacturing:WorkOrder;1",
+    "@type": "Interface",
+    "displayName": "Work Order",
+    "extends": "dtmi:io:konnektr:manufacturing:BaseManufacturingEntity;1",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "orderNumber",
+            "schema": "string"
+        },
+        {
+            "@type": "Property",
+            "name": "quantityTarget",
+            "schema": "integer"
+        },
+        {
+            "@type": "Property",
+            "name": "quantityCompleted",
+            "schema": "integer"
+        },
+        {
+            "@type": "Property",
+            "name": "dueDate",
+            "schema": "date"
+        },
+        {
+            "@type": "Relationship",
+            "name": "produces",
+            "target": "dtmi:io:konnektr:manufacturing:Product;1"
+        }
+    ]
+}

@@ -1,0 +1,30 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:business:Opportunity;1",
+    "@type": "Interface",
+    "displayName": "Sales Opportunity",
+    "extends": "dtmi:io:konnektr:business:BaseEntity;1",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "stageName",
+            "schema": "string",
+            "description": "Prospecting, Negotiation, Closed Won"
+        },
+        {
+            "@type": "Property",
+            "name": "amount",
+            "schema": "double"
+        },
+        {
+            "@type": "Property",
+            "name": "closeDate",
+            "schema": "date"
+        },
+        {
+            "@type": "Property",
+            "name": "probability",
+            "schema": "double"
+        }
+    ]
+}

@@ -1,0 +1,37 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:manufacturing:Machine;1",
+    "@type": "Interface",
+    "displayName": "Machine",
+    "extends": "dtmi:io:konnektr:manufacturing:BaseManufacturingEntity;1",
+    "comment": "Base class for specific machinery.",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "modelNumber",
+            "schema": "string"
+        },
+        {
+            "@type": "Property",
+            "name": "serialNumber",
+            "schema": "string"
+        },
+        {
+            "@type": "Property",
+            "name": "operationalState",
+            "schema": "string",
+            "description": "Idle, Producing, Faulted"
+        },
+        {
+            "@type": "Property",
+            "name": "totalRunHours",
+            "schema": "double"
+        },
+        {
+            "@type": "Relationship",
+            "name": "generatedDefect",
+            "target": "dtmi:io:konnektr:manufacturing:Defect;1",
+            "description": "Links a machine to a defect it caused."
+        }
+    ]
+}

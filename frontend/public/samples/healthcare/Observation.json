@@ -1,0 +1,32 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:healthcare:Observation;1",
+    "@type": "Interface",
+    "displayName": "Observation",
+    "extends": "dtmi:io:konnektr:healthcare:BaseHealthEntity;1",
+    "description": "Measurements and simple assertions made about a patient, device, or other subject.",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "code",
+            "schema": "string",
+            "description": "LOINC code (e.g., for Blood Pressure, Heart Rate)."
+        },
+        {
+            "@type": "Property",
+            "name": "value",
+            "schema": "double"
+        },
+        {
+            "@type": "Property",
+            "name": "unit",
+            "schema": "string"
+        },
+        {
+            "@type": "Relationship",
+            "name": "derivedFrom",
+            "target": "dtmi:io:konnektr:healthcare:MedicalDevice;1",
+            "description": "The device that generated this observation."
+        }
+    ]
+}

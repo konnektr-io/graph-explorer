@@ -13,6 +13,10 @@ interface WorkspaceState {
   leftPanelSize: number;
   rightPanelSize: number;
 
+  // Onboarding state
+  hasSeenOnboarding: boolean;
+  onboardingDismissed: boolean;
+
   // Actions
   setMainView: (view: MainView) => void;
   setShowLeftPanel: (show: boolean) => void;
@@ -20,6 +24,8 @@ interface WorkspaceState {
   setPanelSize: (panel: "left" | "right", size: number) => void;
   toggleLeftPanel: () => void;
   toggleRightPanel: () => void;
+  setHasSeenOnboarding: (seen: boolean) => void;
+  dismissOnboarding: () => void;
 }
 
 export const useWorkspaceStore = create<WorkspaceState>()(
@@ -31,6 +37,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       showRightPanel: true,
       leftPanelSize: 20, // percentage
       rightPanelSize: 25, // percentage
+      hasSeenOnboarding: false,
+      onboardingDismissed: false,
 
       // Actions
       setMainView: (view: MainView) => set({ mainView: view }),
@@ -49,6 +57,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         set((state: WorkspaceState) => ({
           showRightPanel: !state.showRightPanel,
         })),
+      setHasSeenOnboarding: (seen: boolean) => set({ hasSeenOnboarding: seen }),
+      dismissOnboarding: () =>
+        set({ onboardingDismissed: true, hasSeenOnboarding: true }),
     }),
     {
       name: "konnektr-workspace",
@@ -59,6 +70,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         showRightPanel: state.showRightPanel,
         leftPanelSize: state.leftPanelSize,
         rightPanelSize: state.rightPanelSize,
+        hasSeenOnboarding: state.hasSeenOnboarding,
+        onboardingDismissed: state.onboardingDismissed,
       }),
     }
   )

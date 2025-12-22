@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { OnboardingDialog } from "./OnboardingDialog";
 import {
   useConnectionStore,
   validateConnectionAuth,
@@ -36,7 +37,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Trash2, MoreVertical, RefreshCw, Pencil } from "lucide-react";
+import { Trash2, MoreVertical, RefreshCw, Pencil, Sprout } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth0 } from "@auth0/auth0-react";
 import { fetchGraphResources } from "@/services/ktrlplaneClient";
@@ -49,6 +50,8 @@ import {
 import { toast } from "sonner";
 
 export function ConnectionSelector(): React.ReactElement {
+  // State for onboarding dialog
+  const [showOnboardingDialog, setShowOnboardingDialog] = useState(false);
   const ktrlPlaneConnections = useConnectionStore(
     (state) => state.ktrlPlaneConnections
   );
@@ -416,7 +419,6 @@ export function ConnectionSelector(): React.ReactElement {
           </SelectGroup>
         </SelectContent>
       </Select>
-
       {(isAuthenticated || canEditCurrent || canDeleteCurrent) && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -425,6 +427,14 @@ export function ConnectionSelector(): React.ReactElement {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={() => {
+                setShowOnboardingDialog(true);
+              }}
+            >
+              <Sprout className="mr-2 h-4 w-4" />
+              Load Sample Data
+            </DropdownMenuItem>
             {isAuthenticated && (
               <DropdownMenuItem onClick={handleRefresh} disabled={isRefreshing}>
                 <RefreshCw
@@ -454,6 +464,11 @@ export function ConnectionSelector(): React.ReactElement {
         </DropdownMenu>
       )}
 
+      {/* Onboarding Dialog for loading sample data */}
+      <OnboardingDialog
+        open={showOnboardingDialog}
+        onOpenChange={setShowOnboardingDialog}
+      />
       <Dialog open={open} onOpenChange={handleDialogOpenChange}>
         <DialogTrigger asChild>
           <Button variant="outline" size="sm">
@@ -718,7 +733,6 @@ export function ConnectionSelector(): React.ReactElement {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

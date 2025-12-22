@@ -1,0 +1,21 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:business:Interaction;1",
+    "@type": "Interface",
+    "displayName": "Interaction",
+    "extends": "dtmi:io:konnektr:business:BaseEntity;1",
+    "comment": "Abstract base for touchpoints.",
+    "description": "Any touchpoint between the company and the world.",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "timestamp",
+            "schema": "dateTime"
+        },
+        {
+            "@type": "Property",
+            "name": "contentSummary",
+            "schema": "string"
+        }
+    ]
+}

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { GlobalErrorToaster } from "@/components/GlobalErrorToaster";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { ThemeProvider } from "next-themes";
@@ -6,19 +6,34 @@ import { GraphHeader } from "@/components/layout/GraphHeader";
 import { ModelSidebar } from "@/components/layout/ModelSidebar";
 import { MainContent } from "@/components/layout/MainContent";
 import { Inspector } from "@/components/inspector/Inspector";
+import { OnboardingDialog } from "@/components/OnboardingDialog";
+import { KtrlPlaneAuthProvider } from "@/components/KtrlPlaneAuthProvider";
+import { KtrlPlaneConnectionManager } from "@/components/KtrlPlaneConnectionManager";
 // import { StatusBar } from "@/components/layout/StatusBar";
 // import { ConnectionStatusBanner } from "@/components/layout/ConnectionStatusBanner";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useConnectionStore } from "@/stores/connectionStore";
+import { useModelsStore } from "@/stores/modelsStore";
+import { useDigitalTwinsStore } from "@/stores/digitalTwinsStore";
 import { CookieConsent } from "@/components/cookie-consent";
-import { KtrlPlaneAuthProvider } from "@/components/KtrlPlaneAuthProvider";
-import { KtrlPlaneConnectionManager } from "@/components/KtrlPlaneConnectionManager";
+import konnektrLogo from "@/assets/konnektr.svg";
 
 function App() {
   const addConnection = useConnectionStore((state) => state.addConnection);
   const getAllConnections = useConnectionStore(
     (state) => state.getAllConnections
   );
+
+  const models = useModelsStore((state) => state.models);
+  const currentConnectionId = useConnectionStore(
+    (state) => state.currentConnectionId
+  );
+
+  const hasSeenOnboarding = useWorkspaceStore(
+    (state) => state.hasSeenOnboarding
+  );
+
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Auto-add demo connection from query param if needed
   useEffect(() => {
@@ -65,9 +80,6 @@ function App() {
     setPanelSize,
   } = useWorkspaceStore();
 
-  const currentConnectionId = useConnectionStore(
-    (state) => state.currentConnectionId
-  );
   const setCurrentConnection = useConnectionStore(
     (state) => state.setCurrentConnection
   );
@@ -104,6 +116,32 @@ function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Check if onboarding should be shown
+  useEffect(() => {
+    // Only show onboarding if:
+    // 1. User has a connection selected
+    // 2. There are no models loaded
+    // 3. User hasn't dismissed onboarding
+    // 4. Not in demo mode (x-adt-host param)
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    const isDemoMode = params.has("x-adt-host");
+
+    if (
+      currentConnectionId &&
+      models.length === 0 &&
+      !hasSeenOnboarding &&
+      !isDemoMode
+    ) {
+      // Small delay to let the UI settle
+      const timer = setTimeout(() => {
+        setShowOnboarding(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [currentConnectionId, models.length, hasSeenOnboarding]);
 
   // Set GTM consent using gtag API
   const setConsent = (consent: "accepted" | "declined") => {
@@ -232,6 +270,12 @@ function App() {
             variant="minimal"
             onAcceptCallback={handleAccept}
             onDeclineCallback={handleDecline}
+          />
+
+          {/* Onboarding Dialog */}
+          <OnboardingDialog
+            open={showOnboarding}
+            onOpenChange={setShowOnboarding}
           />
         </div>
       </ThemeProvider>

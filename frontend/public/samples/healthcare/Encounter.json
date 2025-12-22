@@ -1,0 +1,48 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:healthcare:Encounter;1",
+    "@type": "Interface",
+    "displayName": "Encounter",
+    "extends": "dtmi:io:konnektr:healthcare:BaseHealthEntity;1",
+    "description": "An interaction between a patient and healthcare provider.",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "status",
+            "schema": "string",
+            "description": "planned, arrived, in-progress, finished, cancelled"
+        },
+        {
+            "@type": "Property",
+            "name": "type",
+            "schema": "string",
+            "description": "Emergency, Checkup, Surgery"
+        },
+        {
+            "@type": "Property",
+            "name": "periodStart",
+            "schema": "dateTime"
+        },
+        {
+            "@type": "Property",
+            "name": "periodEnd",
+            "schema": "dateTime"
+        },
+        {
+            "@type": "Relationship",
+            "name": "subject",
+            "target": "dtmi:io:konnektr:healthcare:Patient;1",
+            "maxMultiplicity": 1
+        },
+        {
+            "@type": "Relationship",
+            "name": "participant",
+            "target": "dtmi:io:konnektr:healthcare:Practitioner;1"
+        },
+        {
+            "@type": "Relationship",
+            "name": "resultedIn",
+            "target": "dtmi:io:konnektr:healthcare:Observation;1"
+        }
+    ]
+}

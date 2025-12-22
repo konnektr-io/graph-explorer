@@ -1,0 +1,32 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:business:AgentInsight;1",
+    "@type": "Interface",
+    "displayName": "AI Agent Insight",
+    "extends": "dtmi:io:konnektr:business:BaseEntity;1",
+    "description": "A node created by the AI Agent when it discovers a pattern or actionable intelligence.",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "insightType",
+            "schema": "string",
+            "description": "Risk, Opportunity, Anomaly"
+        },
+        {
+            "@type": "Property",
+            "name": "confidenceScore",
+            "schema": "double"
+        },
+        {
+            "@type": "Property",
+            "name": "recommendedAction",
+            "schema": "string"
+        },
+        {
+            "@type": "Relationship",
+            "name": "derivedFrom",
+            "description": "Links the insight to the source data (e.g., a Tweet and an Order).",
+            "target": "dtmi:io:konnektr:business:BaseEntity;1"
+        }
+    ]
+}

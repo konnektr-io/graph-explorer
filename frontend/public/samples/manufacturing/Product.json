@@ -1,0 +1,26 @@
+{
+    "@context": [
+        "dtmi:dtdl:context;3",
+        "dtmi:dtdl:extension:quantitativeTypes;1"
+    ],
+    "@id": "dtmi:io:konnektr:manufacturing:Product;1",
+    "@type": "Interface",
+    "displayName": "Product",
+    "extends": "dtmi:io:konnektr:manufacturing:BaseManufacturingEntity;1",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "sku",
+            "schema": "string"
+        },
+        {
+            "@type": [
+                "Property",
+                "TimeSpan"
+            ],
+            "name": "targetCycleTime",
+            "schema": "double",
+            "unit": "second"
+        }
+    ]
+}

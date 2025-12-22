@@ -1,0 +1,32 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:manufacturing:ProductionLine;1",
+    "@type": "Interface",
+    "displayName": "Production Line",
+    "extends": "dtmi:io:konnektr:manufacturing:BaseManufacturingEntity;1",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "lineStatus",
+            "schema": "string",
+            "description": "Running, Stopped, Maintenance, Changeover"
+        },
+        {
+            "@type": "Property",
+            "name": "currentShift",
+            "schema": "string"
+        },
+        {
+            "@type": "Relationship",
+            "name": "comprisedOf",
+            "target": "dtmi:io:konnektr:manufacturing:Machine;1",
+            "description": "Hierarchy: Production Line contains Machines."
+        },
+        {
+            "@type": "Relationship",
+            "name": "currentlyProcessing",
+            "target": "dtmi:io:konnektr:manufacturing:WorkOrder;1",
+            "maxMultiplicity": 1
+        }
+    ]
+}

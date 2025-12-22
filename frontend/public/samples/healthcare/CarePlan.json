@@ -1,0 +1,38 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:healthcare:CarePlan;1",
+    "@type": "Interface",
+    "displayName": "Care Plan",
+    "extends": "dtmi:io:konnektr:healthcare:BaseHealthEntity;1",
+    "description": "Describes the intention of how one or more practitioners intend to deliver care for a particular patient.",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "title",
+            "schema": "string"
+        },
+        {
+            "@type": "Property",
+            "name": "status",
+            "schema": "string",
+            "description": "draft, active, on-hold, revoked, completed"
+        },
+        {
+            "@type": "Property",
+            "name": "intent",
+            "schema": "string",
+            "description": "proposal, plan, order, option"
+        },
+        {
+            "@type": "Relationship",
+            "name": "addresses",
+            "target": "dtmi:io:konnektr:healthcare:Condition;1",
+            "description": "The condition this plan is intended to treat."
+        },
+        {
+            "@type": "Relationship",
+            "name": "subject",
+            "target": "dtmi:io:konnektr:healthcare:Patient;1"
+        }
+    ]
+}

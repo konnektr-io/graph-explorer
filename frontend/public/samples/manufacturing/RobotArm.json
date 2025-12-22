@@ -1,0 +1,31 @@
+{
+    "@context": [
+        "dtmi:dtdl:context;3",
+        "dtmi:dtdl:extension:quantitativeTypes;1"
+    ],
+    "@id": "dtmi:io:konnektr:manufacturing:RobotArm;1",
+    "@type": "Interface",
+    "displayName": "Industrial Robot Arm",
+    "extends": "dtmi:io:konnektr:manufacturing:Machine;1",
+    "contents": [
+        {
+            "@type": [
+                "Property",
+                "Mass"
+            ],
+            "name": "maxPayload",
+            "schema": "double",
+            "unit": "kilogram"
+        },
+        {
+            "@type": "Property",
+            "name": "axisCount",
+            "schema": "integer"
+        },
+        {
+            "@type": "Property",
+            "name": "firmwareVersion",
+            "schema": "string"
+        }
+    ]
+}

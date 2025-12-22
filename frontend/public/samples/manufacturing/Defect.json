@@ -1,0 +1,37 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:manufacturing:Defect;1",
+    "@type": "Interface",
+    "displayName": "Quality Defect",
+    "extends": "dtmi:io:konnektr:manufacturing:BaseManufacturingEntity;1",
+    "description": "A record of a quality failure detected during production.",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "defectCode",
+            "schema": "string"
+        },
+        {
+            "@type": "Property",
+            "name": "severity",
+            "schema": "string",
+            "description": "Minor, Major, Critical"
+        },
+        {
+            "@type": "Property",
+            "name": "imageUrl",
+            "schema": "string",
+            "description": "Link to an image of the defect (used for visual QA)."
+        },
+        {
+            "@type": "Property",
+            "name": "detectedAt",
+            "schema": "dateTime"
+        },
+        {
+            "@type": "Relationship",
+            "name": "affectedWorkOrder",
+            "target": "dtmi:io:konnektr:manufacturing:WorkOrder;1"
+        }
+    ]
+}

@@ -1,0 +1,31 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:manufacturing:BaseManufacturingEntity;1",
+    "@type": "Interface",
+    "displayName": "Base Manufacturing Entity",
+    "description": "Root interface for all manufacturing entities, supporting AI analysis via embeddings.",
+    "comment": "Abstract base class.",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "erpId",
+            "schema": "string",
+            "description": "The unique identifier from the ERP or MES system."
+        },
+        {
+            "@type": "Property",
+            "name": "description",
+            "schema": "string"
+        },
+        {
+            "@type": "Property",
+            "name": "vectorEmbedding",
+            "displayName": "Semantic Embedding",
+            "description": "Vector representation of logs, error reports, or specifications.",
+            "schema": {
+                "@type": "Array",
+                "elementSchema": "double"
+            }
+        }
+    ]
+}

@@ -1,0 +1,27 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:healthcare:Condition;1",
+    "@type": "Interface",
+    "displayName": "Condition",
+    "extends": "dtmi:io:konnektr:healthcare:BaseHealthEntity;1",
+    "description": "A clinical condition, problem, diagnosis, or other event, situation, issue, or clinical concept.",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "code",
+            "schema": "string",
+            "description": "ICD-10 or SNOMED code."
+        },
+        {
+            "@type": "Property",
+            "name": "clinicalStatus",
+            "schema": "string",
+            "description": "active, recurrence, remission, resolved"
+        },
+        {
+            "@type": "Property",
+            "name": "severity",
+            "schema": "string"
+        }
+    ]
+}

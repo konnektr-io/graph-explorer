@@ -1,0 +1,29 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:business:Person;1",
+    "@type": "Interface",
+    "displayName": "Person",
+    "extends": "dtmi:io:konnektr:business:Party;1",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "firstName",
+            "schema": "string"
+        },
+        {
+            "@type": "Property",
+            "name": "lastName",
+            "schema": "string"
+        },
+        {
+            "@type": "Property",
+            "name": "jobTitle",
+            "schema": "string"
+        },
+        {
+            "@type": "Relationship",
+            "name": "worksFor",
+            "target": "dtmi:io:konnektr:business:Organization;1"
+        }
+    ]
+}
