@@ -7,8 +7,6 @@ import {
   Loader2,
   AlertCircle,
   Network,
-  Type,
-  Code,
   Columns,
   List,
   Rows,
@@ -38,7 +36,6 @@ interface QueryResultsProps {
 
 export function QueryResults({ results, error, isLoading }: QueryResultsProps) {
   const [viewMode, setViewMode] = useState<"table" | "raw" | "graph">("table");
-  const [columnMode, setColumnMode] = useState<"display" | "raw">("display");
 
   // Analyze data structure and set smart default for table view mode
   const dataStructure = results ? analyzeDataStructure(results) : null;

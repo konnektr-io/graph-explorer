@@ -9,14 +9,10 @@ import { Inspector } from "@/components/inspector/Inspector";
 import { OnboardingDialog } from "@/components/OnboardingDialog";
 import { KtrlPlaneAuthProvider } from "@/components/KtrlPlaneAuthProvider";
 import { KtrlPlaneConnectionManager } from "@/components/KtrlPlaneConnectionManager";
-// import { StatusBar } from "@/components/layout/StatusBar";
-// import { ConnectionStatusBanner } from "@/components/layout/ConnectionStatusBanner";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useConnectionStore } from "@/stores/connectionStore";
 import { useModelsStore } from "@/stores/modelsStore";
-import { useDigitalTwinsStore } from "@/stores/digitalTwinsStore";
 import { CookieConsent } from "@/components/cookie-consent";
-import konnektrLogo from "@/assets/konnektr.svg";
 
 function App() {
   const addConnection = useConnectionStore((state) => state.addConnection);

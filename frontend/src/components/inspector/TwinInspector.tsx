@@ -3,7 +3,6 @@ import { FileText, Database, GitBranch, Plus, ArrowRight, ArrowLeft, Trash2 } fr
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EditableProperty } from "./EditableProperty";
-import { MetadataTooltip } from "@/components/ui/metadata-tooltip";
 import { useDigitalTwinsStore } from "@/stores/digitalTwinsStore";
 import { useInspectorStore } from "@/stores/inspectorStore";
 import type { DigitalTwinPropertyMetadata, BasicRelationship } from "@/types";

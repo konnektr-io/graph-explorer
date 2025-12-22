@@ -221,7 +221,7 @@ export function ConnectionSelector(): React.ReactElement {
 
   const handleDeployOnKtrlPlane = () => {
     window.open(
-      "https://ktrlplane.konnektr.io/resources/create?resource_type=Konnektr.Graph&sku=standard",
+      "https://ktrlplane.konnektr.io/resources/create?resource_type=Konnektr.Graph&sku=standard&utm_source=graph_explorer&utm_medium=app&utm_campaign=deploy_button",
       "_blank"
     );
     setOpen(false);

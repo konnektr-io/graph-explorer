@@ -41,7 +41,12 @@ export const MonacoEditor = forwardRef<MonacoEditorRef, MonacoEditorProps>(
       editorRef.current = editor;
       // Ensure fonts are loaded and remeasure Monaco fonts to fix cursor misalignment
       ensureFontsLoaded(() => {
-        // Optionally, you could force a layout if needed:
+        (
+          editor as monaco.editor.IStandaloneCodeEditor & {
+            remeasureFonts: () => void;
+          }
+        ).remeasureFonts();
+        // force a layout:
         editor.layout();
       });
 
