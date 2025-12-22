@@ -1,7 +1,7 @@
-// @ts-nocheck - Zustand type inference issues with strict mode
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { KtrlPlaneResource } from "@/services/ktrlplaneClient";
+import { isLocalhost } from "@/utils/isLocalHost";
 
 /**
  * Authentication provider types supported by Graph Explorer
@@ -46,6 +46,10 @@ export interface Connection {
 
   // KtrlPlane resource status (optional, only for managed connections)
   status?: string;
+
+  // Internal fields for matching (prefixed with _ to indicate they're not user-facing)
+  _internalEndpoint?: string; // Kubernetes internal service address
+  _externalEndpoint?: string; // Public DNS endpoint
 }
 
 interface ConnectionState {
@@ -201,19 +205,20 @@ export const useConnectionStore = create<ConnectionState>()(
       },
 
       setKtrlPlaneConnections: (resources) => {
-        // Map all resources - prefer internal service address for instant connectivity
+        // Map all resources - prefer public DNS when running locally
         const connections = resources.map((resource) => {
-          // Use internal Kubernetes service address if possible
           const internalEndpoint =
             resource.resource_id && resource.project_id
               ? `${resource.resource_id}-api.${resource.project_id}.svc.cluster.local`
               : undefined;
-          // Prefer internal, else fallback to public DNS
-          const endpoint =
-            internalEndpoint || `${resource.resource_id}.api.graph.konnektr.io`;
+          // If running locally, always use public DNS endpoint
+          const endpoint = isLocalhost()
+            ? `${resource.resource_id}.api.graph.konnektr.io`
+            : internalEndpoint ||
+              `${resource.resource_id}.api.graph.konnektr.io`;
 
           return {
-            id: `ktrlplane-${resource.resource_id}`,
+            id: resource.resource_id,
             name: resource.name,
             adtHost: endpoint,
             description: `Managed by KtrlPlane (${resource.sku})`,
@@ -222,9 +227,80 @@ export const useConnectionStore = create<ConnectionState>()(
             ktrlPlaneResourceId: resource.resource_id,
             ktrlPlaneProjectId: resource.project_id,
             status: resource.status, // Add status property
+            // Store both endpoints for matching
+            _internalEndpoint: internalEndpoint,
+            _externalEndpoint: `${resource.resource_id}.api.graph.konnektr.io`,
           };
         });
-        set({ ktrlPlaneConnections: connections });
+
+        // Deduplicate: Remove local connections that match KtrlPlane resources
+        // Match by external endpoint, internal endpoint, or resource_id
+        set((state) => {
+          let replacementConnectionId: string | null = null;
+
+          const deduplicatedLocal = state.connections.filter((localConn) => {
+            // Check if this local connection matches any KtrlPlane connection
+            const matchingKtrlConn = connections.find((ktrlConn) => {
+              // Match by exact host
+              if (localConn.adtHost === ktrlConn.adtHost) return true;
+              // Match by external endpoint (query param will use this)
+              if (localConn.adtHost === ktrlConn._externalEndpoint) return true;
+              // Match by internal endpoint
+              if (
+                ktrlConn._internalEndpoint &&
+                localConn.adtHost === ktrlConn._internalEndpoint
+              )
+                return true;
+              // Match by resource ID pattern (e.g., "free-resource-1y1z" in either)
+              if (
+                ktrlConn.ktrlPlaneResourceId &&
+                localConn.adtHost.includes(ktrlConn.ktrlPlaneResourceId)
+              )
+                return true;
+              return false;
+            });
+
+            // If this is the currently selected connection and it matches a KtrlPlane connection,
+            // remember to switch to the KtrlPlane connection
+            if (
+              matchingKtrlConn &&
+              localConn.id === state.currentConnectionId
+            ) {
+              replacementConnectionId = matchingKtrlConn.id;
+            }
+
+            return !matchingKtrlConn;
+          });
+
+          const removedCount =
+            state.connections.length - deduplicatedLocal.length;
+          if (removedCount > 0) {
+            console.log(
+              `Removed ${removedCount} duplicate local connection(s) that match KtrlPlane resources`
+            );
+          }
+
+          // If current connection was removed, switch to the replacement
+          const newCurrentConnectionId = replacementConnectionId
+            ? replacementConnectionId
+            : state.currentConnectionId;
+
+          if (
+            replacementConnectionId &&
+            replacementConnectionId !== state.currentConnectionId
+          ) {
+            console.log(
+              `Switching from removed connection to KtrlPlane connection: ${replacementConnectionId}`
+            );
+          }
+
+          return {
+            ktrlPlaneConnections: connections,
+            connections: deduplicatedLocal,
+            currentConnectionId: newCurrentConnectionId,
+          };
+        });
+
         console.log(`Configured ${connections.length} KtrlPlane connections`);
       },
 

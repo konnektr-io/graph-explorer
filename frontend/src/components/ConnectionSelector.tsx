@@ -96,14 +96,8 @@ export function ConnectionSelector(): React.ReactElement {
   });
   const [error, setError] = useState<string | null>(null);
 
-  // Initial fetch and auto-select on auth
-  useEffect(() => {
-    if (isAuthenticated) {
-      handleRefresh();
-    }
-  }, [isAuthenticated]);
-
   // Poll KtrlPlane resources every 30s while authenticated
+  // (Initial fetch happens in KtrlPlaneConnectionManager)
   useEffect(() => {
     if (!isAuthenticated) return;
     const interval = setInterval(() => {
@@ -371,9 +365,9 @@ export function ConnectionSelector(): React.ReactElement {
                   >
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{conn.name}</span>
-                      {conn.ktrlPlaneProjectId && (
+                      {conn.id && (
                         <span className="text-xs text-muted-foreground">
-                          {conn.ktrlPlaneProjectId}
+                          {conn.id}
                         </span>
                       )}
                       <span
@@ -409,9 +403,7 @@ export function ConnectionSelector(): React.ReactElement {
                 <SelectItem key={conn.id} value={conn.id}>
                   <div className="flex items-center gap-2">
                     <span>{conn.name}</span>
-                    {isDemo && (
-                      <Badge variant="secondary">Demo</Badge>
-                    )}
+                    {isDemo && <Badge variant="secondary">Demo</Badge>}
                     {conn.authProvider !== "none" && (
                       <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-secondary">
                         {conn.authProvider}

@@ -85,10 +85,6 @@ export const digitalTwinsClientFactory = async (
 
     // Handle KtrlPlane-managed connections
     if (connection.authProvider === "ktrlplane") {
-      console.log(
-        "Creating KtrlPlane token credential, has getter:",
-        !!getAccessTokenSilently
-      );
       if (!getAccessTokenSilently || !getAccessTokenWithPopup) {
         throw new Error(
           "KtrlPlane connections require Auth0 context. Please sign in."

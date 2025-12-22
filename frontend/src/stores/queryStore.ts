@@ -81,7 +81,7 @@ export const useQueryStore = create<QueryState>()(
       activeTabId: null,
 
       // Current query state
-      currentQuery: "SELECT TOP(5) FROM DIGITALTWINS",
+      currentQuery: "MATCH (n:Twin) RETURN n LIMIT 5",
       isExecuting: false,
       queryResults: null,
       queryError: null,
@@ -187,11 +187,6 @@ export const useQueryStore = create<QueryState>()(
             "Executing query for connection:",
             connection.id,
             connection.authProvider
-          );
-          console.log("Has getAccessTokenSilently:", !!getAccessTokenSilently);
-          console.log(
-            "Has getAccessTokenWithPopup:",
-            !!getAccessTokenWithPopup
           );
 
           // Get authenticated client with optional Auth0 context for KtrlPlane

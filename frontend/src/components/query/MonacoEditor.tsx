@@ -73,6 +73,7 @@ export const MonacoEditor = forwardRef<MonacoEditorRef, MonacoEditorProps>(
       // Define Cypher language tokens
       monaco.languages.setMonarchTokensProvider("cypher", {
         keywords: [
+          "SELECT",
           "MATCH",
           "CREATE",
           "MERGE",

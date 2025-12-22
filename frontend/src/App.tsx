@@ -12,6 +12,7 @@ import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useConnectionStore } from "@/stores/connectionStore";
 import { CookieConsent } from "@/components/cookie-consent";
 import { KtrlPlaneAuthProvider } from "@/components/KtrlPlaneAuthProvider";
+import { KtrlPlaneConnectionManager } from "@/components/KtrlPlaneConnectionManager";
 
 function App() {
   const addConnection = useConnectionStore((state) => state.addConnection);
@@ -27,7 +28,15 @@ function App() {
     if (adtHost) {
       // Check if connection already exists for this host
       const allConnections = getAllConnections();
-      const existing = allConnections.find((c) => c.adtHost === adtHost);
+      const existing = allConnections.find((c) => {
+        // Match by exact host, external endpoint, or resource ID pattern
+        return (
+          c.adtHost === adtHost ||
+          c._externalEndpoint === adtHost ||
+          (c.ktrlPlaneResourceId && adtHost.includes(c.ktrlPlaneResourceId))
+        );
+      });
+
       if (!existing) {
         // Add demo connection
         const demoConn = {
@@ -134,6 +143,7 @@ function App() {
 
   return (
     <KtrlPlaneAuthProvider>
+      <KtrlPlaneConnectionManager />
       <ThemeProvider
         attribute="class"
         defaultTheme="system"

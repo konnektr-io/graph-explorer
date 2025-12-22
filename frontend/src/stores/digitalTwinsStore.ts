@@ -16,6 +16,7 @@ import {
   getDataFromQueryResponse,
   type QueryResponseData,
 } from "@/utils/queryAdt";
+import { formatApiError } from "@/utils/errorHelpers";
 /**
  * Helper to get initialized Digital Twins client
  * Throws error if connection is not configured

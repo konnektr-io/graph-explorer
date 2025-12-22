@@ -290,7 +290,7 @@ export class KtrlPlaneGraphTokenCredential implements TokenCredential {
         } catch (popupError) {
           console.error("Failed to get KtrlPlane Graph token:", popupError);
           throw new Error(
-            "Authentication required. Please sign in to KtrlPlane."
+            "Authentication required. Please sign in to Konnektr."
           );
         }
       } finally {

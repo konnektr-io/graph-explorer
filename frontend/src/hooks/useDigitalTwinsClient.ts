@@ -15,9 +15,9 @@ export function useDigitalTwinsClient() {
   ): Promise<DigitalTwinsClient> => {
     // For KtrlPlane connections, pass the Auth0 token getter
     if (connection.authProvider === "ktrlplane") {
-      if (!isAuthenticated) {
-        throw new Error("Please sign in to access KtrlPlane resources");
-      }
+      /* if (!isAuthenticated) {
+        throw new Error("Please sign in to access Konnektr resources");
+      } */
       return digitalTwinsClientFactory(connection, getAccessTokenSilently);
     }
 
