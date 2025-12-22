@@ -49,20 +49,20 @@ async def proxy(full_path: str, request: Request):
 
     try:
         async with httpx.AsyncClient(verify=True, timeout=120.0) as client:
-            req = client.build_request(
+            # Make the request and read the full response body
+            resp = await client.request(
                 request.method,
                 target_url,
                 headers=headers,
                 content=await request.body(),
                 params=request.query_params,
             )
-            resp = await client.send(req, stream=True)
             logger.info(
-                f"Response: {resp.status_code} ({resp.headers.get('content-length', 'unknown')} bytes)"
+                f"Response: {resp.status_code} ({len(resp.content)} bytes)"
             )
 
             # Prepare response headers - remove transfer-encoding, content-length, and content-encoding
-            # FastAPI's StreamingResponse will handle these automatically
+            # FastAPI will set these correctly
             response_headers = {
                 k: v
                 for k, v in resp.headers.items()
@@ -70,8 +70,9 @@ async def proxy(full_path: str, request: Request):
                 not in ("transfer-encoding", "content-length", "content-encoding")
             }
 
-            return StreamingResponse(
-                resp.aiter_raw(chunk_size=65536),  # 64KB chunks
+            # Return the full response content
+            return Response(
+                content=resp.content,
                 status_code=resp.status_code,
                 headers=response_headers,
             )
@@ -110,20 +111,20 @@ async def ktrlplane_proxy(full_path: str, request: Request):
 
     try:
         async with httpx.AsyncClient(verify=True, timeout=120.0) as client:
-            req = client.build_request(
+            # Make the request and read the full response body
+            resp = await client.request(
                 request.method,
                 target_url,
                 headers=headers,
                 content=await request.body(),
                 params=request.query_params,
             )
-            resp = await client.send(req, stream=True)
             logger.info(
-                f"Response: {resp.status_code} ({resp.headers.get('content-length', 'unknown')} bytes)"
+                f"Response: {resp.status_code} ({len(resp.content)} bytes)"
             )
 
             # Prepare response headers - remove transfer-encoding, content-length, and content-encoding
-            # FastAPI's StreamingResponse will handle these automatically
+            # FastAPI will set these correctly
             response_headers = {
                 k: v
                 for k, v in resp.headers.items()
@@ -131,8 +132,9 @@ async def ktrlplane_proxy(full_path: str, request: Request):
                 not in ("transfer-encoding", "content-length", "content-encoding")
             }
 
-            return StreamingResponse(
-                resp.aiter_raw(chunk_size=65536),  # 64KB chunks
+            # Return the full response content
+            return Response(
+                content=resp.content,
                 status_code=resp.status_code,
                 headers=response_headers,
             )
