@@ -1,0 +1,20 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:facility:Room;1",
+    "@type": "Interface",
+    "displayName": "Room",
+    "extends": "dtmi:io:konnektr:facility:Space;1",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "roomType",
+            "schema": "string",
+            "description": "Conference, Office, Utility, ServerRoom"
+        },
+        {
+            "@type": "Relationship",
+            "name": "adjacentTo",
+            "target": "dtmi:io:konnektr:facility:Room;1"
+        }
+    ]
+}

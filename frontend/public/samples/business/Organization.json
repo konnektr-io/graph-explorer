@@ -1,0 +1,30 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:business:Organization;1",
+    "@type": "Interface",
+    "displayName": "Organization",
+    "extends": "dtmi:io:konnektr:business:Party;1",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "name",
+            "schema": "string"
+        },
+        {
+            "@type": "Property",
+            "name": "industry",
+            "schema": "string"
+        },
+        {
+            "@type": "Property",
+            "name": "annualRevenue",
+            "schema": "double"
+        },
+        {
+            "@type": "Relationship",
+            "name": "parentCompany",
+            "target": "dtmi:io:konnektr:business:Organization;1",
+            "maxMultiplicity": 1
+        }
+    ]
+}

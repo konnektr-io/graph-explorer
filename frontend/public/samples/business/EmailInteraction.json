@@ -1,0 +1,30 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:business:EmailInteraction;1",
+    "@type": "Interface",
+    "displayName": "Email Interaction",
+    "extends": "dtmi:io:konnektr:business:Interaction;1",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "subject",
+            "schema": "string"
+        },
+        {
+            "@type": "Property",
+            "name": "sender",
+            "schema": "string"
+        },
+        {
+            "@type": "Property",
+            "name": "sentimentScore",
+            "schema": "double",
+            "description": "AI extracted sentiment from -1.0 to 1.0"
+        },
+        {
+            "@type": "Relationship",
+            "name": "regardingOpportunity",
+            "target": "dtmi:io:konnektr:business:Opportunity;1"
+        }
+    ]
+}

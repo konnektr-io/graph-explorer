@@ -1,0 +1,25 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:manufacturing:Factory;1",
+    "@type": "Interface",
+    "displayName": "Factory",
+    "extends": "dtmi:io:konnektr:manufacturing:BaseManufacturingEntity;1",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "locationName",
+            "schema": "string"
+        },
+        {
+            "@type": "Property",
+            "name": "totalOutputCapacity",
+            "schema": "double"
+        },
+        {
+            "@type": "Relationship",
+            "name": "hasProductionLine",
+            "target": "dtmi:io:konnektr:manufacturing:ProductionLine;1",
+            "description": "Hierarchy: Factory contains Production Lines."
+        }
+    ]
+}

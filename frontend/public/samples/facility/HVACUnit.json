@@ -1,0 +1,27 @@
+{
+    "@context": [
+        "dtmi:dtdl:context;3",
+        "dtmi:dtdl:extension:quantitativeTypes;1"
+    ],
+    "@id": "dtmi:io:konnektr:facility:HVACUnit;1",
+    "@type": "Interface",
+    "displayName": "HVAC Unit",
+    "extends": "dtmi:io:konnektr:facility:Equipment;1",
+    "contents": [
+        {
+            "@type": [
+                "Property",
+                "Power"
+            ],
+            "name": "coolingCapacity",
+            "schema": "double",
+            "unit": "kilowatt"
+        },
+        {
+            "@type": "Property",
+            "name": "filterStatus",
+            "schema": "string",
+            "description": "OK, ReplaceSoon, Critical"
+        }
+    ]
+}

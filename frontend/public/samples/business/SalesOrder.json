@@ -1,0 +1,36 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:business:SalesOrder;1",
+    "@type": "Interface",
+    "displayName": "Sales Order",
+    "extends": "dtmi:io:konnektr:business:BaseEntity;1",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "orderNumber",
+            "schema": "string"
+        },
+        {
+            "@type": "Property",
+            "name": "totalAmount",
+            "schema": "double"
+        },
+        {
+            "@type": "Property",
+            "name": "status",
+            "schema": "string"
+        },
+        {
+            "@type": "Relationship",
+            "name": "includesProduct",
+            "target": "dtmi:io:konnektr:business:Product;1",
+            "properties": [
+                {
+                    "@type": "Property",
+                    "name": "quantity",
+                    "schema": "integer"
+                }
+            ]
+        }
+    ]
+}

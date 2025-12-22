@@ -337,6 +337,7 @@ export function ModelSidebar() {
                 className="p-1.5"
                 onClick={handleImportClick}
                 title="Import Models"
+                data-import-models
               >
                 <Plus className="w-3 h-3" />
                 <span className="sr-only">Import Models</span>

@@ -1,0 +1,50 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:business:BaseEntity;1",
+    "@type": "Interface",
+    "displayName": "Base Entity",
+    "description": "The root of all digital twin entities, containing common metadata and vector embeddings.",
+    "comment": "Abstract base class. Not intended for direct instantiation.",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "externalId",
+            "schema": "string",
+            "description": "The primary key from the source system (e.g., Salesforce ID, SAP ID)."
+        },
+        {
+            "@type": "Property",
+            "name": "description",
+            "schema": "string",
+            "description": "Natural language description used for text-to-embedding generation."
+        },
+        {
+            "@type": "Property",
+            "name": "createdAt",
+            "schema": "dateTime"
+        },
+        {
+            "@type": "Property",
+            "name": "updatedAt",
+            "schema": "dateTime"
+        },
+        {
+            "@type": "Property",
+            "name": "tags",
+            "schema": {
+                "@type": "Array",
+                "elementSchema": "string"
+            }
+        },
+        {
+            "@type": "Property",
+            "name": "vectorEmbedding",
+            "displayName": "Vector Embedding",
+            "description": "High-dimensional vector representation of this entity's textual data for semantic search.",
+            "schema": {
+                "@type": "Array",
+                "elementSchema": "double"
+            }
+        }
+    ]
+}

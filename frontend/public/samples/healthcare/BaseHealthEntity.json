@@ -1,0 +1,37 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:healthcare:BaseHealthEntity;1",
+    "@type": "Interface",
+    "displayName": "Base Health Entity",
+    "description": "Root interface for all clinical and administrative entities.",
+    "comment": "Abstract base class.",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "identifier",
+            "schema": "string",
+            "description": "EMR (Electronic Medical Record) ID or FHIR Resource ID."
+        },
+        {
+            "@type": "Property",
+            "name": "clinicalNotes",
+            "schema": "string",
+            "description": "Unstructured text notes (e.g., doctor's observations)."
+        },
+        {
+            "@type": "Property",
+            "name": "lastUpdated",
+            "schema": "dateTime"
+        },
+        {
+            "@type": "Property",
+            "name": "vectorEmbedding",
+            "displayName": "Clinical Embedding",
+            "description": "Vector representation of clinical notes and symptoms for similarity search.",
+            "schema": {
+                "@type": "Array",
+                "elementSchema": "double"
+            }
+        }
+    ]
+}

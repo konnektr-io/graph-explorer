@@ -1,0 +1,29 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:business:Product;1",
+    "@type": "Interface",
+    "displayName": "Product",
+    "extends": "dtmi:io:konnektr:business:BaseEntity;1",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "sku",
+            "schema": "string"
+        },
+        {
+            "@type": "Property",
+            "name": "name",
+            "schema": "string"
+        },
+        {
+            "@type": "Property",
+            "name": "unitPrice",
+            "schema": "double"
+        },
+        {
+            "@type": "Property",
+            "name": "inventoryCount",
+            "schema": "integer"
+        }
+    ]
+}

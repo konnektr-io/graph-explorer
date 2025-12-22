@@ -1,0 +1,31 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:healthcare:Patient;1",
+    "@type": "Interface",
+    "displayName": "Patient",
+    "extends": "dtmi:io:konnektr:healthcare:BaseHealthEntity;1",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "dateOfBirth",
+            "schema": "date"
+        },
+        {
+            "@type": "Property",
+            "name": "gender",
+            "schema": "string"
+        },
+        {
+            "@type": "Relationship",
+            "name": "hasCondition",
+            "target": "dtmi:io:konnektr:healthcare:Condition;1",
+            "description": "Active diagnoses for the patient."
+        },
+        {
+            "@type": "Relationship",
+            "name": "assignedPractitioner",
+            "target": "dtmi:io:konnektr:healthcare:Practitioner;1",
+            "description": "Primary Care Physician or specialist."
+        }
+    ]
+}

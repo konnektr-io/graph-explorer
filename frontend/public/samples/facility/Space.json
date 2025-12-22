@@ -1,0 +1,38 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:facility:Space;1",
+    "@type": "Interface",
+    "displayName": "Space",
+    "extends": "dtmi:io:konnektr:facility:BaseFacilityEntity;1",
+    "comment": "Abstract class for topological locations.",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "name",
+            "schema": "string"
+        },
+        {
+            "@type": "Property",
+            "name": "capacity",
+            "schema": "integer"
+        },
+        {
+            "@type": "Property",
+            "name": "occupancyStatus",
+            "schema": "string",
+            "description": "Occupied, Vacant, Maintenance"
+        },
+        {
+            "@type": "Relationship",
+            "name": "contains",
+            "target": "dtmi:io:konnektr:facility:Space;1",
+            "description": "Hierarchical relationship (Building -> Floor -> Zone -> Room)."
+        },
+        {
+            "@type": "Relationship",
+            "name": "houses",
+            "target": "dtmi:io:konnektr:facility:Equipment;1",
+            "description": "Equipment located within this space."
+        }
+    ]
+}

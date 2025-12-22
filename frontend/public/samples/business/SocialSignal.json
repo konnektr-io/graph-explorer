@@ -1,0 +1,30 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:business:SocialSignal;1",
+    "@type": "Interface",
+    "displayName": "Social Media Signal",
+    "extends": "dtmi:io:konnektr:business:Interaction;1",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "platform",
+            "schema": "string",
+            "description": "Twitter, LinkedIn, Reddit, etc."
+        },
+        {
+            "@type": "Property",
+            "name": "url",
+            "schema": "string"
+        },
+        {
+            "@type": "Property",
+            "name": "engagementCount",
+            "schema": "integer"
+        },
+        {
+            "@type": "Relationship",
+            "name": "mentionsProduct",
+            "target": "dtmi:io:konnektr:business:Product;1"
+        }
+    ]
+}

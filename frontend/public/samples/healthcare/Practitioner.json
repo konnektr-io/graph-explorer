@@ -1,0 +1,25 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:healthcare:Practitioner;1",
+    "@type": "Interface",
+    "displayName": "Practitioner",
+    "extends": "dtmi:io:konnektr:healthcare:BaseHealthEntity;1",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "fullName",
+            "schema": "string"
+        },
+        {
+            "@type": "Property",
+            "name": "specialty",
+            "schema": "string",
+            "description": "Cardiology, Neurology, General Practice, etc."
+        },
+        {
+            "@type": "Property",
+            "name": "licenseNumber",
+            "schema": "string"
+        }
+    ]
+}

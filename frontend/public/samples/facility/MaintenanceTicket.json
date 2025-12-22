@@ -1,0 +1,31 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:facility:MaintenanceTicket;1",
+    "@type": "Interface",
+    "displayName": "Maintenance Ticket",
+    "extends": "dtmi:io:konnektr:facility:BaseFacilityEntity;1",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "priority",
+            "schema": "string",
+            "description": "Low, Medium, High, Emergency"
+        },
+        {
+            "@type": "Property",
+            "name": "status",
+            "schema": "string"
+        },
+        {
+            "@type": "Property",
+            "name": "reportedIssue",
+            "schema": "string"
+        },
+        {
+            "@type": "Relationship",
+            "name": "concerns",
+            "target": "dtmi:io:konnektr:facility:BaseFacilityEntity;1",
+            "description": "Links the ticket to the broken Equipment or the affected Space."
+        }
+    ]
+}

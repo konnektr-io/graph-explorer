@@ -1,0 +1,26 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:business:Party;1",
+    "@type": "Interface",
+    "displayName": "Party",
+    "extends": "dtmi:io:konnektr:business:BaseEntity;1",
+    "comment": "Abstract class for People and Organizations.",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "contactEmail",
+            "schema": "string"
+        },
+        {
+            "@type": "Property",
+            "name": "phoneNumber",
+            "schema": "string"
+        },
+        {
+            "@type": "Relationship",
+            "name": "participatedIn",
+            "target": "dtmi:io:konnektr:business:Interaction;1",
+            "description": "Links the party to meetings, calls, or emails."
+        }
+    ]
+}

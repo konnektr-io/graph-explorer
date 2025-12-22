@@ -1,0 +1,19 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:facility:Floor;1",
+    "@type": "Interface",
+    "displayName": "Floor",
+    "extends": "dtmi:io:konnektr:facility:Space;1",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "levelNumber",
+            "schema": "integer"
+        },
+        {
+            "@type": "Property",
+            "name": "floorPlanUrl",
+            "schema": "string"
+        }
+    ]
+}

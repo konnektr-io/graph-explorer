@@ -1,0 +1,30 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:facility:Sensor;1",
+    "@type": "Interface",
+    "displayName": "IoT Sensor",
+    "extends": "dtmi:io:konnektr:facility:Equipment;1",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "readingValue",
+            "schema": "double"
+        },
+        {
+            "@type": "Property",
+            "name": "readingUnit",
+            "schema": "string"
+        },
+        {
+            "@type": "Property",
+            "name": "lastTelemetryTimestamp",
+            "schema": "dateTime"
+        },
+        {
+            "@type": "Relationship",
+            "name": "monitors",
+            "target": "dtmi:io:konnektr:facility:Equipment;1",
+            "description": "A sensor might be attached to specific equipment."
+        }
+    ]
+}

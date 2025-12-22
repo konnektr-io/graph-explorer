@@ -1,0 +1,30 @@
+{
+    "@context": "dtmi:dtdl:context;3",
+    "@id": "dtmi:io:konnektr:business:Customer;1",
+    "@type": "Interface",
+    "displayName": "Customer",
+    "extends": "dtmi:io:konnektr:business:Organization;1",
+    "contents": [
+        {
+            "@type": "Property",
+            "name": "accountStatus",
+            "schema": "string",
+            "description": "Active, ChurnRisk, Churned"
+        },
+        {
+            "@type": "Property",
+            "name": "lifetimeValue",
+            "schema": "double"
+        },
+        {
+            "@type": "Relationship",
+            "name": "hasOpportunity",
+            "target": "dtmi:io:konnektr:business:Opportunity;1"
+        },
+        {
+            "@type": "Relationship",
+            "name": "placedOrder",
+            "target": "dtmi:io:konnektr:business:SalesOrder;1"
+        }
+    ]
+}
