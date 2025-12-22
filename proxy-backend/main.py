@@ -48,7 +48,7 @@ async def proxy(full_path: str, request: Request):
     headers.pop("referer", None)
 
     try:
-        async with httpx.AsyncClient(verify=True) as client:
+        async with httpx.AsyncClient(verify=True, timeout=120.0) as client:
             req = client.build_request(
                 request.method,
                 target_url,
@@ -60,17 +60,24 @@ async def proxy(full_path: str, request: Request):
             logger.info(
                 f"Response: {resp.status_code} ({resp.headers.get('content-length', 'unknown')} bytes)"
             )
+            
+            # Prepare response headers, keeping content-length if present
+            response_headers = dict(resp.headers)
+            response_headers.pop("transfer-encoding", None)  # Let FastAPI handle this
+            
             return StreamingResponse(
-                resp.aiter_raw(),
+                resp.aiter_raw(chunk_size=65536),  # 64KB chunks
                 status_code=resp.status_code,
-                headers={
-                    k: v
-                    for k, v in resp.headers.items()
-                    if k.lower() != "content-length"
-                },
+                headers=response_headers,
             )
+    except httpx.TimeoutException as e:
+        logger.error(f"Proxy timeout error for {target_url}: {e}")
+        raise HTTPException(status_code=504, detail=f"Timeout connecting to backend: {str(e)}")
+    except httpx.ConnectError as e:
+        logger.error(f"Proxy connection error for {target_url}: {e}")
+        raise HTTPException(status_code=502, detail=f"Cannot connect to backend: {str(e)}")
     except Exception as e:
-        logger.error(f"Proxy error: {e}")
+        logger.error(f"Proxy error: {type(e).__name__}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Proxy error: {str(e)}")
 
 
@@ -93,7 +100,7 @@ async def ktrlplane_proxy(full_path: str, request: Request):
     headers.pop("referer", None)
 
     try:
-        async with httpx.AsyncClient(verify=True, timeout=30.0) as client:
+        async with httpx.AsyncClient(verify=True, timeout=120.0) as client:
             req = client.build_request(
                 request.method,
                 target_url,
@@ -105,14 +112,15 @@ async def ktrlplane_proxy(full_path: str, request: Request):
             logger.info(
                 f"Response: {resp.status_code} ({resp.headers.get('content-length', 'unknown')} bytes)"
             )
+            
+            # Prepare response headers, keeping content-length if present
+            response_headers = dict(resp.headers)
+            response_headers.pop("transfer-encoding", None)  # Let FastAPI handle this
+            
             return StreamingResponse(
-                resp.aiter_raw(),
+                resp.aiter_raw(chunk_size=65536),  # 64KB chunks
                 status_code=resp.status_code,
-                headers={
-                    k: v
-                    for k, v in resp.headers.items()
-                    if k.lower() != "content-length"
-                },
+                headers=response_headers,
             )
     except httpx.ConnectError as e:
         logger.error(f"KtrlPlane connection error - cannot reach {target_url}: {e}")
