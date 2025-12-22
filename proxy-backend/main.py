@@ -57,9 +57,7 @@ async def proxy(full_path: str, request: Request):
                 content=await request.body(),
                 params=request.query_params,
             )
-            logger.info(
-                f"Response: {resp.status_code} ({len(resp.content)} bytes)"
-            )
+            logger.info(f"Response: {resp.status_code} ({len(resp.content)} bytes)")
 
             # Prepare response headers - remove transfer-encoding, content-length, and content-encoding
             # FastAPI will set these correctly
@@ -119,9 +117,7 @@ async def ktrlplane_proxy(full_path: str, request: Request):
                 content=await request.body(),
                 params=request.query_params,
             )
-            logger.info(
-                f"Response: {resp.status_code} ({len(resp.content)} bytes)"
-            )
+            logger.info(f"Response: {resp.status_code} ({len(resp.content)} bytes)")
 
             # Prepare response headers - remove transfer-encoding, content-length, and content-encoding
             # FastAPI will set these correctly
