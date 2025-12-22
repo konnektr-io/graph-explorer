@@ -61,9 +61,12 @@ async def proxy(full_path: str, request: Request):
                 f"Response: {resp.status_code} ({resp.headers.get('content-length', 'unknown')} bytes)"
             )
 
-            # Prepare response headers, keeping content-length if present
-            response_headers = dict(resp.headers)
-            response_headers.pop("transfer-encoding", None)  # Let FastAPI handle this
+            # Prepare response headers - remove transfer-encoding, content-length, and content-encoding
+            # FastAPI's StreamingResponse will handle these automatically
+            response_headers = {
+                k: v for k, v in resp.headers.items()
+                if k.lower() not in ("transfer-encoding", "content-length", "content-encoding")
+            }
 
             return StreamingResponse(
                 resp.aiter_raw(chunk_size=65536),  # 64KB chunks
@@ -117,9 +120,12 @@ async def ktrlplane_proxy(full_path: str, request: Request):
                 f"Response: {resp.status_code} ({resp.headers.get('content-length', 'unknown')} bytes)"
             )
 
-            # Prepare response headers, keeping content-length if present
-            response_headers = dict(resp.headers)
-            response_headers.pop("transfer-encoding", None)  # Let FastAPI handle this
+            # Prepare response headers - remove transfer-encoding, content-length, and content-encoding
+            # FastAPI's StreamingResponse will handle these automatically
+            response_headers = {
+                k: v for k, v in resp.headers.items()
+                if k.lower() not in ("transfer-encoding", "content-length", "content-encoding")
+            }
 
             return StreamingResponse(
                 resp.aiter_raw(chunk_size=65536),  # 64KB chunks
