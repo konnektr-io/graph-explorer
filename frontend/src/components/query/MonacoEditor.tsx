@@ -41,11 +41,36 @@ export const MonacoEditor = forwardRef<MonacoEditorRef, MonacoEditorProps>(
       editorRef.current = editor;
       // Ensure fonts are loaded and remeasure Monaco fonts to fix cursor misalignment
       ensureFontsLoaded(() => {
-        (
-          editor as monaco.editor.IStandaloneCodeEditor & {
-            remeasureFonts: () => void;
-          }
-        ).remeasureFonts();
+        if (
+          editor &&
+          typeof (
+            editor as monaco.editor.IStandaloneCodeEditor & {
+              remeasureFonts: () => void;
+            }
+          ).remeasureFonts === "function"
+        ) {
+          (
+            editor as monaco.editor.IStandaloneCodeEditor & {
+              remeasureFonts: () => void;
+            }
+          ).remeasureFonts();
+        } else if (
+          window &&
+          "monaco" in window &&
+          typeof (
+            (window.monaco as { editor: monaco.editor.IStandaloneCodeEditor })
+              ?.editor as monaco.editor.IStandaloneCodeEditor & {
+              remeasureFonts: () => void;
+            }
+          )?.remeasureFonts === "function"
+        ) {
+          (
+            (window.monaco as { editor: monaco.editor.IStandaloneCodeEditor })
+              ?.editor as monaco.editor.IStandaloneCodeEditor & {
+              remeasureFonts: () => void;
+            }
+          ).remeasureFonts();
+        }
         // force a layout:
         editor.layout();
       });
