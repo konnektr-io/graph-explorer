@@ -60,11 +60,11 @@ async def proxy(full_path: str, request: Request):
             logger.info(
                 f"Response: {resp.status_code} ({resp.headers.get('content-length', 'unknown')} bytes)"
             )
-            
+
             # Prepare response headers, keeping content-length if present
             response_headers = dict(resp.headers)
             response_headers.pop("transfer-encoding", None)  # Let FastAPI handle this
-            
+
             return StreamingResponse(
                 resp.aiter_raw(chunk_size=65536),  # 64KB chunks
                 status_code=resp.status_code,
@@ -72,10 +72,14 @@ async def proxy(full_path: str, request: Request):
             )
     except httpx.TimeoutException as e:
         logger.error(f"Proxy timeout error for {target_url}: {e}")
-        raise HTTPException(status_code=504, detail=f"Timeout connecting to backend: {str(e)}")
+        raise HTTPException(
+            status_code=504, detail=f"Timeout connecting to backend: {str(e)}"
+        )
     except httpx.ConnectError as e:
         logger.error(f"Proxy connection error for {target_url}: {e}")
-        raise HTTPException(status_code=502, detail=f"Cannot connect to backend: {str(e)}")
+        raise HTTPException(
+            status_code=502, detail=f"Cannot connect to backend: {str(e)}"
+        )
     except Exception as e:
         logger.error(f"Proxy error: {type(e).__name__}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Proxy error: {str(e)}")
@@ -112,11 +116,11 @@ async def ktrlplane_proxy(full_path: str, request: Request):
             logger.info(
                 f"Response: {resp.status_code} ({resp.headers.get('content-length', 'unknown')} bytes)"
             )
-            
+
             # Prepare response headers, keeping content-length if present
             response_headers = dict(resp.headers)
             response_headers.pop("transfer-encoding", None)  # Let FastAPI handle this
-            
+
             return StreamingResponse(
                 resp.aiter_raw(chunk_size=65536),  # 64KB chunks
                 status_code=resp.status_code,
