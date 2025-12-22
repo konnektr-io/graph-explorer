@@ -64,8 +64,10 @@ async def proxy(full_path: str, request: Request):
             # Prepare response headers - remove transfer-encoding, content-length, and content-encoding
             # FastAPI's StreamingResponse will handle these automatically
             response_headers = {
-                k: v for k, v in resp.headers.items()
-                if k.lower() not in ("transfer-encoding", "content-length", "content-encoding")
+                k: v
+                for k, v in resp.headers.items()
+                if k.lower()
+                not in ("transfer-encoding", "content-length", "content-encoding")
             }
 
             return StreamingResponse(
@@ -123,8 +125,10 @@ async def ktrlplane_proxy(full_path: str, request: Request):
             # Prepare response headers - remove transfer-encoding, content-length, and content-encoding
             # FastAPI's StreamingResponse will handle these automatically
             response_headers = {
-                k: v for k, v in resp.headers.items()
-                if k.lower() not in ("transfer-encoding", "content-length", "content-encoding")
+                k: v
+                for k, v in resp.headers.items()
+                if k.lower()
+                not in ("transfer-encoding", "content-length", "content-encoding")
             }
 
             return StreamingResponse(
