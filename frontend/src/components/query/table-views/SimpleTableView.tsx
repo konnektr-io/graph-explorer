@@ -7,26 +7,35 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+
+// Utility to get all unique keys from all rows (sorted for stable rendering)
+function getAllColumnKeys(results: unknown[]): string[] {
+  const keySet = new Set<string>();
+  for (const row of results) {
+    if (typeof row === "object" && row !== null) {
+      Object.keys(row).forEach((k) => keySet.add(k));
+    }
+  }
+  return Array.from(keySet).sort();
+}
+
 interface SimpleTableViewProps {
   results: unknown[];
-  columnKeys: string[];
-  columnHeaders: string[];
   onRowClick: (row: unknown) => void;
 }
 
 export function SimpleTableView({
   results,
-  columnKeys,
-  columnHeaders,
   onRowClick,
 }: SimpleTableViewProps) {
+  const columnKeys = getAllColumnKeys(results);
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          {columnKeys.map((key, index) => (
+          {columnKeys.map((key) => (
             <TableHead key={key} className="font-semibold">
-              {columnHeaders[index]}
+              {key}
             </TableHead>
           ))}
         </TableRow>
@@ -47,7 +56,7 @@ export function SimpleTableView({
                 <TableCell key={key} className="font-mono text-xs">
                   {typeof value === "object" && value !== null
                     ? JSON.stringify(value)
-                    : String(value)}
+                    : value === undefined ? "" : String(value)}
                 </TableCell>
               );
             })}

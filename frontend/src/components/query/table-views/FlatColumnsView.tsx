@@ -12,7 +12,7 @@ import {
   getEntityProperties,
 } from "@/utils/dataStructureDetector";
 
-// Collect all unique property keys for each entity column across all rows
+// Collect all unique property keys for each entity column across all rows (deduplicated, sorted)
 function getAllEntityPropertiesByColumn(results: unknown[], entityColumns: string[]) {
   const map: Record<string, Set<string>> = {};
   for (const col of entityColumns) {

@@ -43,6 +43,9 @@
   --brand-teal: oklch(0.55 0.12 180); /* #1E9E95 equivalent - Secondary Teal */
   --brand-gray: oklch(0.45 0.01 240); /* Neutral gray */
   --brand-light: oklch(0.98 0.001 240); /* Light text/backgrounds */
+
+  --font-sans: "Plus Jakarta Sans", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular
 }
 
 .dark {

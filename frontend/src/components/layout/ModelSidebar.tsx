@@ -431,6 +431,7 @@ export function ModelSidebar() {
                     <TreeView
                       data={filteredTree}
                       className="w-full"
+                      expandAll={true}
                       selectedItemId={treeSelectedId}
                       onSelectChange={handleModelSelect}
                     />

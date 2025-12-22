@@ -384,20 +384,6 @@ export function TwinInspector({ twinId }: TwinInspectorProps) {
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="pt-4 border-t">
-        <MetadataTooltip
-          metadata={{
-            lastUpdateTime: $metadata.$lastUpdateTime as string | undefined,
-          }}
-        >
-          <div className="text-xs text-muted-foreground space-y-1">
-            <div>Click properties to edit • Hover for metadata</div>
-            <div>Changes save automatically</div>
-          </div>
-        </MetadataTooltip>
-      </div>
-
       {/* Create Relationship Dialog */}
       <CreateRelationshipDialog
         open={showCreateRelDialog}

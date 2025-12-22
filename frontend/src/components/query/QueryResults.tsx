@@ -3,7 +3,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
-  Eye,
   Table,
   Loader2,
   AlertCircle,
@@ -13,10 +12,10 @@ import {
   Columns,
   List,
   Rows,
+  Braces,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useInspectorStore } from "@/stores/inspectorStore";
 import { GraphViewer } from "@/components/graph/GraphViewer";
 import { transformResultsToGraph } from "@/utils/queryResultsTransformer";
@@ -57,32 +56,6 @@ export function QueryResults({ results, error, isLoading }: QueryResultsProps) {
   // Transform results for graph view
   const graphData = transformResultsToGraph(results);
 
-  // Get column headers based on mode
-  const getColumnHeaders = () => {
-    if (!results || results.length === 0) return [];
-    const firstRow = results[0];
-    if (typeof firstRow !== "object" || firstRow === null) return [];
-    const keys = Object.keys(firstRow);
-    if (columnMode === "display") {
-      // Try to get display names from DTDL for each key
-      return keys.map((key) => {
-        if (key.startsWith("$")) return key;
-        return (
-          key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, " $1")
-        );
-      });
-    }
-    return keys;
-  };
-
-  const columnHeaders = getColumnHeaders();
-  const columnKeys =
-    results &&
-    results.length > 0 &&
-    typeof results[0] === "object" &&
-    results[0] !== null
-      ? Object.keys(results[0])
-      : [];
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedColumns, setExpandedColumns] = useState<
     Record<string, boolean>
@@ -231,7 +204,7 @@ export function QueryResults({ results, error, isLoading }: QueryResultsProps) {
               className="px-2 py-1 text-xs"
               onClick={() => setViewMode("raw")}
             >
-              <Eye className="w-3 h-3" />
+              <Braces className="w-3 h-3" />
             </Button>
           </div>
 
@@ -278,29 +251,6 @@ export function QueryResults({ results, error, isLoading }: QueryResultsProps) {
                     title="Expandable rows (master-detail view)"
                   >
                     <Rows className="w-3 h-3" />
-                  </Button>
-                </div>
-              )}
-
-              {tableViewMode === "simple" && (
-                <div className="flex gap-1 p-1 bg-muted rounded-md">
-                  <Button
-                    variant={columnMode === "display" ? "default" : "ghost"}
-                    size="sm"
-                    className="px-2 py-1 text-xs"
-                    onClick={() => setColumnMode("display")}
-                    title="Show display names from DTDL models"
-                  >
-                    <Type className="w-3 h-3" />
-                  </Button>
-                  <Button
-                    variant={columnMode === "raw" ? "default" : "ghost"}
-                    size="sm"
-                    className="px-2 py-1 text-xs"
-                    onClick={() => setColumnMode("raw")}
-                    title="Show raw field names"
-                  >
-                    <Code className="w-3 h-3" />
                   </Button>
                 </div>
               )}
@@ -379,86 +329,85 @@ export function QueryResults({ results, error, isLoading }: QueryResultsProps) {
 
         {results && results.length > 0 && (
           <div className="flex flex-col h-full">
-            <ScrollArea className="flex-1 min-h-0">
-              <div className="min-w-max">
-                {viewMode === "table" ? (
-                  <div className="p-4">
-                    {tableViewMode === "simple" && (
-                      <SimpleTableView
-                        results={paginatedResults}
-                        columnKeys={columnKeys}
-                        columnHeaders={columnHeaders}
-                        onRowClick={handleRowClick}
-                      />
-                    )}
-                    {tableViewMode === "grouped" && (
-                      <GroupedColumnsView
-                        results={paginatedResults}
-                        expandedColumns={expandedColumns}
-                        onToggleColumn={toggleColumn}
-                        onEntityClick={handleRowClick}
-                      />
-                    )}
-                    {tableViewMode === "flat" && (
-                      <FlatColumnsView
-                        results={paginatedResults}
-                        onEntityClick={handleRowClick}
-                      />
-                    )}
-                    {tableViewMode === "expandable" && (
-                      <ExpandableRowsView
-                        results={paginatedResults}
-                        expandedRows={expandedRows}
-                        onToggleRow={toggleRow}
-                      />
-                    )}
-                  </div>
-                ) : viewMode === "graph" ? (
-                  <div className="p-4 h-full w-full">
-                    {graphData.hasGraphData ? (
-                      <GraphViewer
-                        twins={graphData.twins}
-                        relationships={graphData.relationships}
-                        onNodeClick={(twinId: string) =>
-                          selectItem({ type: "twin", id: twinId })
-                        }
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full">
-                        <div className="text-center max-w-md">
-                          <Network className="w-12 h-12 mx-auto mb-4 opacity-50 text-muted-foreground" />
-                          <h3 className="text-lg font-semibold mb-2">
-                            No Graph Data Available
-                          </h3>
-                          <p className="text-sm text-muted-foreground mb-4">
-                            The current query results don't contain digital
-                            twins or relationships that can be visualized as a
-                            graph.
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Graph view requires results with{" "}
-                            <code className="bg-muted px-1 py-0.5 rounded">
-                              $dtId
-                            </code>{" "}
-                            (twins) or{" "}
-                            <code className="bg-muted px-1 py-0.5 rounded">
-                              $relationshipId
-                            </code>{" "}
-                            (relationships) properties.
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="p-4 w-full">
-                    <pre className="bg-muted p-4 rounded-md text-xs font-mono whitespace-pre">
-                      {JSON.stringify(paginatedResults, null, 2)}
-                    </pre>
-                  </div>
-                )}
+            {viewMode === "table" ? (
+              <div className="flex-1 overflow-auto min-h-0">
+                <div className="p-4 min-w-max">
+                  {tableViewMode === "simple" && (
+                    <SimpleTableView
+                      results={paginatedResults}
+                      onRowClick={handleRowClick}
+                    />
+                  )}
+                  {tableViewMode === "grouped" && (
+                    <GroupedColumnsView
+                      results={paginatedResults}
+                      expandedColumns={expandedColumns}
+                      onToggleColumn={toggleColumn}
+                      onEntityClick={handleRowClick}
+                    />
+                  )}
+                  {tableViewMode === "flat" && (
+                    <FlatColumnsView
+                      results={paginatedResults}
+                      onEntityClick={handleRowClick}
+                    />
+                  )}
+                  {tableViewMode === "expandable" && (
+                    <ExpandableRowsView
+                      results={paginatedResults}
+                      expandedRows={expandedRows}
+                      onToggleRow={toggleRow}
+                    />
+                  )}
+                </div>
               </div>
-            </ScrollArea>
+            ) : viewMode === "graph" ? (
+              <div className="flex-1 overflow-auto min-h-0">
+                <div className="p-4 h-full w-full">
+                  {graphData.hasGraphData ? (
+                    <GraphViewer
+                      twins={graphData.twins}
+                      relationships={graphData.relationships}
+                      onNodeClick={(twinId: string) =>
+                        selectItem({ type: "twin", id: twinId })
+                      }
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center max-w-md">
+                        <Network className="w-12 h-12 mx-auto mb-4 opacity-50 text-muted-foreground" />
+                        <h3 className="text-lg font-semibold mb-2">
+                          No Graph Data Available
+                        </h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          The current query results don't contain digital twins
+                          or relationships that can be visualized as a graph.
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Graph view requires results with{" "}
+                          <code className="bg-muted px-1 py-0.5 rounded">
+                            $dtId
+                          </code>{" "}
+                          (twins) or{" "}
+                          <code className="bg-muted px-1 py-0.5 rounded">
+                            $relationshipId
+                          </code>{" "}
+                          (relationships) properties.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 overflow-auto min-h-0">
+                <div className="p-4 w-full">
+                  <pre className="bg-muted p-4 rounded-md text-xs font-mono whitespace-pre">
+                    {JSON.stringify(paginatedResults, null, 2)}
+                  </pre>
+                </div>
+              </div>
+            )}
 
             {/* Pagination */}
             {totalPages > 1 && (
