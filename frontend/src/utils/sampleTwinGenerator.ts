@@ -109,7 +109,7 @@ function generatePropertyValue(property: DtdlProperty) {
 /**
  * Generate sample twins for a given DTDL model
  */
-export function generateSampleTwins(
+function generateSampleTwins(
   model: DtdlInterface,
   count: number = 3
 ): SampleTwinData[] {
@@ -164,20 +164,74 @@ export function generateSampleTwins(
 }
 
 /**
+ * Generate sample relationships for a set of twins based on DTDL relationships
+ */
+function generateSampleRelationships(
+  model: DtdlInterface,
+  twins: SampleTwinData[],
+  allTwinsByModel: Record<string, SampleTwinData[]>
+): any[] {
+  const relationships =
+    (model.contents?.filter(
+      (content) => content["@type"] === "Relationship"
+    ) as any[]) || [];
+
+  const rels: any[] = [];
+  twins.forEach((sourceTwin) => {
+    relationships.forEach((rel) => {
+      // Find possible targets by target type
+      const targetModelId = rel.target;
+      const possibleTargets = allTwinsByModel[targetModelId] || [];
+      if (possibleTargets.length === 0) return;
+
+      // Pick 1-2 random targets for each relationship
+      const numLinks = Math.min(2, possibleTargets.length);
+      const shuffled = [...possibleTargets].sort(() => 0.5 - Math.random());
+      for (let i = 0; i < numLinks; i++) {
+        const targetTwin = shuffled[i];
+        if (!targetTwin || targetTwin.$dtId === sourceTwin.$dtId) continue;
+        rels.push({
+          $relationshipId: `${sourceTwin.$dtId}-${rel.name}-${targetTwin.$dtId}`,
+          $sourceId: sourceTwin.$dtId,
+          $targetId: targetTwin.$dtId,
+          $relationshipName: rel.name,
+        });
+      }
+    });
+  });
+  return rels;
+}
+
+/**
  * Generate sample twins for all models in a domain
  */
 export function generateSampleTwinsForDomain(
   models: DtdlInterface[],
-  tweinsPerModel: number = 3
-): SampleTwinData[] {
+  twinsPerModel: number = 3
+): { twins: SampleTwinData[]; relationships: any[] } {
   const allTwins: SampleTwinData[] = [];
+  const allTwinsByModel: Record<string, SampleTwinData[]> = {};
 
+  // Generate all twins and index by modelId
   models.forEach((model) => {
-    const twins = generateSampleTwins(model, tweinsPerModel);
+    const twins = generateSampleTwins(model, twinsPerModel);
     allTwins.push(...twins);
+    if (model["@id"]) {
+      allTwinsByModel[model["@id"]] = twins;
+    }
   });
 
-  return allTwins;
+  // Generate relationships for all models
+  const allRelationships: any[] = [];
+  models.forEach((model) => {
+    const modelId = model["@id"];
+    if (!modelId) return;
+    const twins = allTwinsByModel[modelId] || [];
+    const rels = generateSampleRelationships(model, twins, allTwinsByModel);
+    allRelationships.push(...rels);
+  });
+
+  return { twins: allTwins, relationships: allRelationships };
 }
 
 /**

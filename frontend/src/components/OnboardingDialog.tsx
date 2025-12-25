@@ -33,9 +33,8 @@ import { useModelsStore } from "@/stores/modelsStore";
 import { useDigitalTwinsStore } from "@/stores/digitalTwinsStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { fetchDomainModels } from "@/utils/sampleDataLoader";
+import { generateSampleTwinsForDomain } from "@/utils/sampleTwinGenerator";
 import {
-  generateSampleTwins,
-  getRecommendedTwinCount,
 } from "@/utils/sampleTwinGenerator";
 import { toast } from "sonner";
 
@@ -107,6 +106,7 @@ export function OnboardingDialog({
   );
   const uploadModels = useModelsStore((state) => state.uploadModels);
   const createTwin = useDigitalTwinsStore((state) => state.createTwin);
+  const createRelationship = useDigitalTwinsStore((state) => state.createRelationship);
   const loadModels = useModelsStore((state) => state.loadModels);
   const setHasSeenOnboarding = useWorkspaceStore(
     (state) => state.setHasSeenOnboarding
@@ -219,23 +219,34 @@ export function OnboardingDialog({
         description: `Imported ${domainModels.length} models. Now generating sample twins...`,
       });
 
-      // Generate and create sample twins
-      let totalTwinsCreated = 0;
-      for (const model of domainModels) {
-        const twinCount = getRecommendedTwinCount(model);
-        if (twinCount > 0) {
-          const sampleTwins = generateSampleTwins(model, twinCount);
 
-          // Create twins one by one
-          for (const twinData of sampleTwins) {
-            try {
-              await createTwin(twinData, authCallbacks);
-              totalTwinsCreated++;
-            } catch (err) {
-              console.warn(`Failed to create twin ${twinData.$dtId}:`, err);
-              // Continue with next twin
-            }
-          }
+      // Generate all sample twins and relationships for the domain
+      const { twins: sampleTwins, relationships: sampleRelationships } = generateSampleTwinsForDomain(
+        domainModels,
+        undefined // use default per-model count logic
+      );
+
+      // Create twins one by one
+      let totalTwinsCreated = 0;
+      for (const twinData of sampleTwins) {
+        try {
+          await createTwin(twinData, authCallbacks);
+          totalTwinsCreated++;
+        } catch (err) {
+          console.warn(`Failed to create twin ${twinData.$dtId}:`, err);
+          // Continue with next twin
+        }
+      }
+
+      // Create relationships one by one
+      let totalRelationshipsCreated = 0;
+      for (const relData of sampleRelationships) {
+        try {
+          await createRelationship(relData, authCallbacks);
+          totalRelationshipsCreated++;
+        } catch (err) {
+          console.warn(`Failed to create relationship ${relData.$relationshipId}:`, err);
+          // Continue with next relationship
         }
       }
 
