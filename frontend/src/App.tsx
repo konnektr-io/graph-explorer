@@ -115,29 +115,35 @@ function App() {
 
   // Check if onboarding should be shown
   useEffect(() => {
-    // Only show onboarding if:
-    // 1. User has a connection selected
-    // 2. There are no models loaded
+    // Show onboarding if:
+    // 1. User has a connection selected but no models loaded (existing flow)
+    // 2. User has NO connection at all (new users)
     // 3. User hasn't dismissed onboarding
-    // 4. Not in demo mode (x-adt-host param)
     if (typeof window === "undefined") return;
 
-    const params = new URLSearchParams(window.location.search);
-    const isDemoMode = params.has("x-adt-host");
+    const allConnections = getAllConnections();
+    const hasAnyConnection = allConnections.length > 0;
 
-    if (
-      currentConnectionId &&
-      models.length === 0 &&
-      !hasSeenOnboarding &&
-      !isDemoMode
-    ) {
-      // Small delay to let the UI settle
+    // Show for new users with no connections
+    if (!hasAnyConnection && !hasSeenOnboarding) {
       const timer = setTimeout(() => {
         setShowOnboarding(true);
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [currentConnectionId, models.length, hasSeenOnboarding]);
+
+    // Show for existing users with connection but no models
+    if (
+      currentConnectionId &&
+      models.length === 0 &&
+      !hasSeenOnboarding
+    ) {
+      const timer = setTimeout(() => {
+        setShowOnboarding(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [currentConnectionId, models.length, hasSeenOnboarding, getAllConnections]);
 
   // Set GTM consent using gtag API
   const setConsent = (consent: "accepted" | "declined") => {
