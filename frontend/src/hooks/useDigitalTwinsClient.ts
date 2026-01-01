@@ -10,15 +10,6 @@ import type { DigitalTwinsClient } from "@azure/digital-twins-core";
 export function useDigitalTwinsClient() {
   const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth0();
 
-  // Wrapper to match expected signature
-  const getTokenWithPopup = async (options?: {
-    authorizationParams?: { audience?: string; scope?: string };
-  }) => {
-    const token = await getAccessTokenWithPopup(options);
-    if (!token) throw new Error("Failed to get token with popup");
-    return token;
-  };
-
   const getClient = async (
     connection: Connection
   ): Promise<DigitalTwinsClient> => {
@@ -30,7 +21,7 @@ export function useDigitalTwinsClient() {
       return digitalTwinsClientFactory(
         connection,
         getAccessTokenSilently,
-        getTokenWithPopup
+        getAccessTokenWithPopup
       );
     }
 

@@ -69,7 +69,7 @@ export const digitalTwinsClientFactory = async (
   }) => Promise<string>,
   getAccessTokenWithPopup?: (options?: {
     authorizationParams?: { audience?: string; scope?: string };
-  }) => Promise<string>
+  }) => Promise<string | undefined>
 ): Promise<DigitalTwinsClient> => {
   const { adtHost } = connection;
 

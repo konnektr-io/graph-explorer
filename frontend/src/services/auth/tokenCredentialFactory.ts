@@ -217,7 +217,7 @@ export class KtrlPlaneGraphTokenCredential implements TokenCredential {
   }) => Promise<string>;
   private getAccessTokenWithPopup: (options?: {
     authorizationParams?: { audience?: string; scope?: string };
-  }) => Promise<string>;
+  }) => Promise<string | undefined>;
   private pendingTokenRequest: Promise<{
     token: string;
     expiresOnTimestamp: number;
@@ -229,7 +229,7 @@ export class KtrlPlaneGraphTokenCredential implements TokenCredential {
     }) => Promise<string>,
     getAccessTokenWithPopup: (options?: {
       authorizationParams?: { audience?: string; scope?: string };
-    }) => Promise<string>
+    }) => Promise<string | undefined>
   ) {
     this.getAccessTokenSilently = getAccessTokenSilently;
     this.getAccessTokenWithPopup = getAccessTokenWithPopup;
@@ -282,6 +282,9 @@ export class KtrlPlaneGraphTokenCredential implements TokenCredential {
               scope,
             },
           });
+          if (!token) {
+            throw new Error("Failed to get token with popup");
+          }
 
           return {
             token,
