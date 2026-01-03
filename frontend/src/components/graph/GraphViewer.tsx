@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import Graph from "graphology";
 import Sigma from "sigma";
 import type { BasicDigitalTwin, BasicRelationship } from "@/types";
 import { useDigitalTwinsStore } from "@/stores/digitalTwinsStore";
+import { useConnectionStore } from "@/stores/connectionStore";
+import { digitalTwinsClientFactory } from "@/services/digitalTwinsClientFactory";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, Network } from "lucide-react";
 import { useAuth0 } from "@auth0/auth0-react";
@@ -35,18 +37,18 @@ const LAYOUT_OPTIONS = [
 
 // Generate color from string hash using brand palette
 const generateColorFromString = (str: string): string => {
-  // Brand colors from theme (teal and blue variants)
+  // Brand colors from theme (teal and blue variants) - hex for better compatibility
   const brandColors = [
-    "oklch(0.55 0.12 180)", // teal
-    "oklch(0.65 0.12 180)", // lighter teal
-    "oklch(0.45 0.12 180)", // darker teal
-    "oklch(0.35 0.08 240)", // blue
-    "oklch(0.55 0.08 240)", // lighter blue
-    "oklch(0.45 0.08 240)", // medium blue
-    "oklch(0.6 0.118 184.704)", // chart-2
-    "oklch(0.398 0.07 227.392)", // chart-3
-    "oklch(0.828 0.189 84.429)", // chart-4
-    "oklch(0.646 0.222 41.116)", // chart-1
+    "#1E9E95", // teal
+    "#4DB8AF", // lighter teal
+    "#157A72", // darker teal
+    "#2D4263", // blue
+    "#4A6FA5", // lighter blue
+    "#354B6E", // medium blue
+    "#3498DB", // chart blue
+    "#2E5C8A", // chart dark blue
+    "#F39C12", // chart orange
+    "#E67E22", // chart red-orange
   ];
 
   let hash = 0;
@@ -94,75 +96,98 @@ export function GraphViewer({
   const [isLoadingRelationships, setIsLoadingRelationships] = useState(false);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [layoutType, setLayoutType] = useState<LayoutType>("force");
+  const [hasManuallyPositionedNodes, setHasManuallyPositionedNodes] =
+    useState(false);
+  const hasFetchedRelationshipsRef = useRef(false);
 
   const { queryRelationships } = useDigitalTwinsStore();
   const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth0();
+
+  // Create stable dependency that only changes when twin IDs actually change
+  const twinIds = useMemo(() => {
+    return twins
+      .map((t) => t.$dtId)
+      .sort()
+      .join(",");
+  }, [twins]);
 
   // Auto-fetch relationships between loaded twins
   useEffect(() => {
     if (!autoFetchRelationships || twins.length === 0 || isLoadingRelationships)
       return;
 
+    // Only fetch once per twins load
+    if (hasFetchedRelationshipsRef.current) return;
+
     const fetchRelationships = async () => {
       setIsLoadingRelationships(true);
       try {
         const twinIds = new Set(twins.map((t) => t.$dtId));
-        const allRelationships = new Set<string>();
+        const twinIdArray = Array.from(twinIds);
 
-        // Fetch relationships for each twin
-        for (const twin of twins) {
-          try {
-            const rels = await queryRelationships(twin.$dtId, "all", {
-              getAccessTokenSilently,
-              getAccessTokenWithPopup,
-            });
+        // Build IN clause for efficient single query
+        const inClause = twinIdArray.map((id) => `'${id}'`).join(", ");
+        const query = `SELECT * FROM RELATIONSHIPS WHERE $sourceId IN [${inClause}] OR $targetId IN [${inClause}]`;
 
-            // Only keep relationships where both source and target are in our twin set
-            rels.forEach((rel) => {
-              if (twinIds.has(rel.$sourceId) && twinIds.has(rel.$targetId)) {
-                allRelationships.add(JSON.stringify(rel));
-              }
-            });
-          } catch (err) {
-            console.warn(
-              `Failed to fetch relationships for ${twin.$dtId}:`,
-              err
-            );
-          }
-        }
+        try {
+          const { getCurrentConnection } = useConnectionStore.getState();
+          const connection = getCurrentConnection();
+          if (!connection) return;
 
-        // Convert back to objects and update graph
-        const relationshipsArray = Array.from(allRelationships).map((s) =>
-          JSON.parse(s)
-        );
+          const client = await digitalTwinsClientFactory(
+            connection,
+            getAccessTokenSilently,
+            getAccessTokenWithPopup
+          );
 
-        if (relationshipsArray.length > 0 && graphRef.current) {
-          // Add relationships to existing graph
-          relationshipsArray.forEach((rel) => {
+          const result = client.queryTwins(query);
+          const allRelationships: BasicRelationship[] = [];
+
+          for await (const item of result) {
+            // Check if it's a relationship and both endpoints are in our twin set
             if (
-              graphRef.current?.hasNode(rel.$sourceId) &&
-              graphRef.current?.hasNode(rel.$targetId) &&
-              !graphRef.current?.hasEdge(rel.$relationshipId)
+              item.$relationshipId &&
+              typeof item.$sourceId === "string" &&
+              twinIds.has(item.$sourceId) &&
+              typeof item.$targetId === "string" &&
+              twinIds.has(item.$targetId)
             ) {
-              try {
-                graphRef.current.addEdgeWithKey(
-                  rel.$relationshipId,
-                  rel.$sourceId,
-                  rel.$targetId,
-                  {
-                    label: rel.$relationshipName || "relationship",
-                    color: "#666",
-                    size: 2,
-                    relationship: rel,
-                  }
-                );
-              } catch (err) {
-                console.warn("Could not add edge:", err);
-              }
+              allRelationships.push(item as BasicRelationship);
             }
-          });
+          }
 
-          sigmaRef.current?.refresh();
+          if (allRelationships.length > 0 && graphRef.current) {
+            // Add relationships to existing graph
+            allRelationships.forEach((rel) => {
+              if (
+                graphRef.current?.hasNode(rel.$sourceId) &&
+                graphRef.current?.hasNode(rel.$targetId) &&
+                !graphRef.current?.hasEdge(rel.$relationshipId)
+              ) {
+                try {
+                  graphRef.current.addEdgeWithKey(
+                    rel.$relationshipId,
+                    rel.$sourceId,
+                    rel.$targetId,
+                    {
+                      label: rel.$relationshipName || "relationship",
+                      color: "#666",
+                      size: 2,
+                      relationship: rel,
+                    }
+                  );
+                } catch (err) {
+                  console.warn("Could not add edge:", err);
+                }
+              }
+            });
+
+            sigmaRef.current?.refresh();
+          }
+
+          hasFetchedRelationshipsRef.current = true;
+        } catch (err) {
+          console.warn("Failed to fetch relationships:", err);
         }
       } catch (error) {
         console.error("Error fetching relationships:", error);
@@ -171,13 +196,14 @@ export function GraphViewer({
       }
     };
 
-    // Only fetch if we have twins but no relationships
+    // Only fetch if we don't have relationships already
     if (relationships.length === 0) {
       fetchRelationships();
+    } else {
+      hasFetchedRelationshipsRef.current = true;
     }
   }, [
     twins,
-    relationships,
     autoFetchRelationships,
     queryRelationships,
     getAccessTokenSilently,
@@ -270,15 +296,16 @@ export function GraphViewer({
     ]
   );
 
-  // Apply layout algorithm
-  const applyLayout = useCallback((type: LayoutType) => {
+  // Reset layout using current layout type
+  const resetLayout = useCallback(() => {
     if (!graphRef.current || !containerRef.current) return;
 
+    setHasManuallyPositionedNodes(false);
     const graph = graphRef.current;
     const width = containerRef.current.clientWidth;
     const height = containerRef.current.clientHeight;
 
-    switch (type) {
+    switch (layoutType) {
       case "circular": {
         circular.assign(graph, { scale: Math.min(width, height) * 0.35 });
         // Center the graph
@@ -355,18 +382,21 @@ export function GraphViewer({
     }
 
     sigmaRef.current?.refresh();
-  }, []);
+  }, [layoutType]);
 
-  // Reset layout using current layout type
-  const resetLayout = useCallback(() => {
-    applyLayout(layoutType);
-  }, [layoutType, applyLayout]);
+  // Apply layout when layout type changes (without recreating the graph)
+  useEffect(() => {
+    if (!hasManuallyPositionedNodes && graphRef.current && sigmaRef.current) {
+      resetLayout();
+    }
+  }, [layoutType, hasManuallyPositionedNodes, resetLayout]);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
     // Reset expanded nodes when data changes
     setExpandedNodes(new Set());
+    hasFetchedRelationshipsRef.current = false;
 
     // Create a new graph
     const graph = new Graph();
@@ -466,14 +496,86 @@ export function GraphViewer({
     sigma.getMouseCaptor().on("mouseup", () => {
       if (draggedNode) {
         graph.removeNodeAttribute(draggedNode, "highlighted");
+        setHasManuallyPositionedNodes(true);
         draggedNode = null;
       }
       isDragging = false;
     });
 
-    // Apply initial layout
-    if (twins.length > 0) {
-      applyLayout(layoutType);
+    // Apply initial layout when graph is created
+    if (twins.length > 0 && containerRef.current) {
+      setHasManuallyPositionedNodes(false);
+      const width = containerRef.current.clientWidth;
+      const height = containerRef.current.clientHeight;
+
+      switch (layoutType) {
+        case "circular": {
+          circular.assign(graph, { scale: Math.min(width, height) * 0.35 });
+          graph.forEachNode((node) => {
+            const x = graph.getNodeAttribute(node, "x");
+            const y = graph.getNodeAttribute(node, "y");
+            graph.setNodeAttribute(node, "x", x + width / 2);
+            graph.setNodeAttribute(node, "y", y + height / 2);
+          });
+          break;
+        }
+        case "force": {
+          const settings = forceAtlas2.inferSettings(graph);
+          forceAtlas2.assign(graph, {
+            iterations: 50,
+            settings: { ...settings, gravity: 1, scalingRatio: 10 },
+          });
+          noverlap.assign(graph, 50);
+
+          const bounds = {
+            minX: Infinity,
+            maxX: -Infinity,
+            minY: Infinity,
+            maxY: -Infinity,
+          };
+          graph.forEachNode((node) => {
+            const x = graph.getNodeAttribute(node, "x");
+            const y = graph.getNodeAttribute(node, "y");
+            bounds.minX = Math.min(bounds.minX, x);
+            bounds.maxX = Math.max(bounds.maxX, x);
+            bounds.minY = Math.min(bounds.minY, y);
+            bounds.maxY = Math.max(bounds.maxY, y);
+          });
+
+          const graphWidth = bounds.maxX - bounds.minX || 1;
+          const graphHeight = bounds.maxY - bounds.minY || 1;
+          const scale =
+            Math.min(width / graphWidth, height / graphHeight) * 0.8;
+
+          graph.forEachNode((node) => {
+            const x = graph.getNodeAttribute(node, "x");
+            const y = graph.getNodeAttribute(node, "y");
+            graph.setNodeAttribute(
+              node,
+              "x",
+              (x - bounds.minX) * scale + width * 0.1
+            );
+            graph.setNodeAttribute(
+              node,
+              "y",
+              (y - bounds.minY) * scale + height * 0.1
+            );
+          });
+          break;
+        }
+        case "random": {
+          random.assign(graph, { scale: Math.min(width, height) * 0.4 });
+          graph.forEachNode((node) => {
+            const x = graph.getNodeAttribute(node, "x");
+            const y = graph.getNodeAttribute(node, "y");
+            graph.setNodeAttribute(node, "x", x + width / 2);
+            graph.setNodeAttribute(node, "y", y + height / 2);
+          });
+          break;
+        }
+      }
+
+      sigma.refresh();
     }
 
     // Cleanup function
@@ -484,14 +586,8 @@ export function GraphViewer({
       }
       graphRef.current = null;
     };
-  }, [
-    twins,
-    relationships,
-    onNodeClick,
-    handleNodeDoubleClick,
-    layoutType,
-    applyLayout,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [twinIds, layoutType]);
 
   return (
     <div className="relative w-full h-full">
@@ -505,12 +601,9 @@ export function GraphViewer({
       <div className="absolute top-4 right-4 flex gap-2">
         <Select
           value={layoutType}
-          onValueChange={(value) => {
-            setLayoutType(value as LayoutType);
-            applyLayout(value as LayoutType);
-          }}
+          onValueChange={(value) => setLayoutType(value as LayoutType)}
         >
-          <SelectTrigger className="w-[180px] h-8 text-sm">
+          <SelectTrigger className="w-[180px] h-8 text-sm bg-background border-border">
             <Network className="h-4 w-4 mr-2" />
             <SelectValue />
           </SelectTrigger>

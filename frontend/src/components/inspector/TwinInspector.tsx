@@ -261,10 +261,8 @@ export function TwinInspector({ twinId }: TwinInspectorProps) {
                       key={rel.$relationshipId}
                       className="group flex items-center gap-2 p-2 border rounded-md hover:bg-muted/50 transition-colors text-xs"
                     >
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="flex-1 justify-start h-auto p-0 gap-2 min-w-0"
+                      <div
+                        className="flex-1 flex items-center justify-start gap-2 min-w-0 cursor-pointer"
                         onClick={() => handleRelationshipClick(rel)}
                       >
                         <Badge variant="outline" className="shrink-0">
@@ -282,7 +280,7 @@ export function TwinInspector({ twinId }: TwinInspectorProps) {
                         >
                           {rel.$targetId}
                         </Button>
-                      </Button>
+                      </div>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -315,10 +313,8 @@ export function TwinInspector({ twinId }: TwinInspectorProps) {
                       key={rel.$relationshipId}
                       className="group flex items-center gap-2 p-2 border rounded-md hover:bg-muted/50 transition-colors text-xs"
                     >
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="flex-1 justify-start h-auto p-0 gap-2 min-w-0"
+                      <div
+                        className="flex-1 flex items-center justify-start gap-2 min-w-0 cursor-pointer"
                         onClick={() => handleRelationshipClick(rel)}
                       >
                         <Button
@@ -336,7 +332,7 @@ export function TwinInspector({ twinId }: TwinInspectorProps) {
                         <Badge variant="outline" className="shrink-0">
                           {rel.$relationshipName}
                         </Badge>
-                      </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -361,7 +357,9 @@ export function TwinInspector({ twinId }: TwinInspectorProps) {
           {editableProperties.map((key) => {
             // Value from twin, or undefined if not set
             const value = (twin as any)[key];
-            const metadata = $metadata[key] as DigitalTwinPropertyMetadata | undefined;
+            const metadata = $metadata[key] as
+              | DigitalTwinPropertyMetadata
+              | undefined;
             const definition = propertyDefinitions[key];
 
             return (
