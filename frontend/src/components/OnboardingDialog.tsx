@@ -207,8 +207,8 @@ export function OnboardingDialog({
           : currentConnection?.authProvider === "ktrlplane" ||
             currentConnection?.isKtrlPlaneManaged
           ? {
-              getAccessTokenSilently: getTokenSilently,
-              getAccessTokenWithPopup: getTokenWithPopup,
+              getAccessTokenSilently,
+              getAccessTokenWithPopup,
             }
           : undefined;
 

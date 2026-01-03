@@ -200,9 +200,13 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
         let isCypher = false;
 
         // Use efficient Cypher query for KtrlPlane connections
-        if (connection?.authProvider === "ktrlplane") {
-             query = "MATCH (t:Twin) RETURN t.`$metadata`.`$model` AS _modelId, count(*)";
-             isCypher = true;
+        if (
+          connection?.authProvider === "ktrlplane" ||
+          connection?.adtHost.includes("konnektr.io")
+        ) {
+          query =
+            "MATCH (t:Twin) RETURN t.`$metadata`.`$model` AS _modelId, count(*)";
+          isCypher = true;
         }
 
         const iterator = client.queryTwins(query);

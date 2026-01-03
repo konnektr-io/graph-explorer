@@ -42,5 +42,5 @@ export interface AuthCallbacks {
   }) => Promise<string>;
   getAccessTokenWithPopup?: (options?: {
     authorizationParams?: { audience?: string; scope?: string };
-  }) => Promise<string>;
+  }) => Promise<string | undefined>;
 }
