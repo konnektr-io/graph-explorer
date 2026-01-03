@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { shallow } from "zustand/shallow";
 import {
   Dialog,
   DialogContent,
@@ -34,8 +35,7 @@ import { useDigitalTwinsStore } from "@/stores/digitalTwinsStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { fetchDomainModels } from "@/utils/sampleDataLoader";
 import { generateSampleTwinsForDomain } from "@/utils/sampleTwinGenerator";
-import {
-} from "@/utils/sampleTwinGenerator";
+import {} from "@/utils/sampleTwinGenerator";
 import { toast } from "sonner";
 
 interface OnboardingDialogProps {
@@ -94,19 +94,28 @@ export function OnboardingDialog({
   const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth0();
 
   // Store hooks
-  const currentConnection = useConnectionStore((state) =>
-    state.getCurrentConnection()
-  );
+  const currentConnection = useConnectionStore((state) => {
+    const allConnections = [
+      ...state.ktrlPlaneConnections,
+      ...state.connections,
+    ];
+    return (
+      allConnections.find((c) => c.id === state.currentConnectionId) || null
+    );
+  });
   const addConnection = useConnectionStore((state) => state.addConnection);
   const setCurrentConnection = useConnectionStore(
     (state) => state.setCurrentConnection
   );
-  const getAllConnections = useConnectionStore((state) =>
-    state.getAllConnections()
+  const connections = useConnectionStore((state) => state.connections);
+  const ktrlPlaneConnections = useConnectionStore(
+    (state) => state.ktrlPlaneConnections
   );
   const uploadModels = useModelsStore((state) => state.uploadModels);
   const createTwin = useDigitalTwinsStore((state) => state.createTwin);
-  const createRelationship = useDigitalTwinsStore((state) => state.createRelationship);
+  const createRelationship = useDigitalTwinsStore(
+    (state) => state.createRelationship
+  );
   const loadModels = useModelsStore((state) => state.loadModels);
   const setHasSeenOnboarding = useWorkspaceStore(
     (state) => state.setHasSeenOnboarding
@@ -118,7 +127,8 @@ export function OnboardingDialog({
   const handleLoadDemo = async () => {
     try {
       // Check if demo connection already exists
-      const existingDemo = getAllConnections.find(
+      const allConnections = [...ktrlPlaneConnections, ...connections];
+      const existingDemo = allConnections.find(
         (c) => c.adtHost === DEMO_CONNECTION.adtHost
       );
 
@@ -203,12 +213,12 @@ export function OnboardingDialog({
         description: `Imported ${domainModels.length} models. Now generating sample twins...`,
       });
 
-
       // Generate all sample twins and relationships for the domain
-      const { twins: sampleTwins, relationships: sampleRelationships } = generateSampleTwinsForDomain(
-        domainModels,
-        undefined // use default per-model count logic
-      );
+      const { twins: sampleTwins, relationships: sampleRelationships } =
+        generateSampleTwinsForDomain(
+          domainModels,
+          undefined // use default per-model count logic
+        );
 
       // Create twins one by one
       let totalTwinsCreated = 0;
@@ -229,7 +239,10 @@ export function OnboardingDialog({
           await createRelationship(relData, authCallbacks);
           totalRelationshipsCreated++;
         } catch (err) {
-          console.warn(`Failed to create relationship ${relData.$relationshipId}:`, err);
+          console.warn(
+            `Failed to create relationship ${relData.$relationshipId}:`,
+            err
+          );
           // Continue with next relationship
         }
       }
@@ -460,7 +473,9 @@ export function OnboardingDialog({
                         2
                       </Badge>
                       <div>
-                        <strong className="text-foreground">Create Twins</strong>
+                        <strong className="text-foreground">
+                          Create Twins
+                        </strong>
                         <p>
                           Create instances (twins) based on your models with
                           actual data and properties
@@ -514,7 +529,9 @@ export function OnboardingDialog({
                       <Card
                         key={domain.id}
                         className="cursor-pointer hover:border-primary transition-colors"
-                        onClick={() => !isLoading && handleLoadSamples(domain.id)}
+                        onClick={() =>
+                          !isLoading && handleLoadSamples(domain.id)
+                        }
                       >
                         <CardHeader className="pb-3">
                           <div className="flex items-start justify-between">
@@ -523,13 +540,19 @@ export function OnboardingDialog({
                               {domain.models} models
                             </Badge>
                           </div>
-                          <CardTitle className="text-base">{domain.name}</CardTitle>
+                          <CardTitle className="text-base">
+                            {domain.name}
+                          </CardTitle>
                           <CardDescription className="text-xs">
                             {domain.description}
                           </CardDescription>
                         </CardHeader>
                         <CardContent className="pt-0">
-                          <Button size="sm" className="w-full" disabled={isLoading}>
+                          <Button
+                            size="sm"
+                            className="w-full"
+                            disabled={isLoading}
+                          >
                             {loading ? "Loading..." : "Load This Sample"}
                           </Button>
                         </CardContent>
@@ -541,9 +564,7 @@ export function OnboardingDialog({
 
               {/* Alternative Options for users with connection */}
               <div className="border-t pt-4">
-                <h3 className="text-sm font-semibold mb-3">
-                  Other Options
-                </h3>
+                <h3 className="text-sm font-semibold mb-3">Other Options</h3>
                 <div className="flex gap-2 flex-wrap">
                   <Button
                     variant="outline"
