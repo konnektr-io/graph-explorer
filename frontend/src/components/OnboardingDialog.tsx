@@ -115,22 +115,6 @@ export function OnboardingDialog({
     (state) => state.dismissOnboarding
   );
 
-  // Wrapper to match expected signature and preserve Auth0 context
-  const getTokenSilently = async (options?: {
-    authorizationParams?: { audience?: string; scope?: string };
-  }) => {
-    return await getAccessTokenSilently(options);
-  };
-
-  // Wrapper to match expected signature and preserve Auth0 context
-  const getTokenWithPopup = async (options?: {
-    authorizationParams?: { audience?: string; scope?: string };
-  }) => {
-    const token = await getAccessTokenWithPopup(options);
-    if (!token) throw new Error("Failed to get token with popup");
-    return token;
-  };
-
   const handleLoadDemo = async () => {
     try {
       // Check if demo connection already exists
