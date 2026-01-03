@@ -22,6 +22,9 @@ import {
   Briefcase,
   Upload,
   X,
+  Cloud,
+  Zap,
+  Globe,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth0 } from "@auth0/auth0-react";
@@ -30,9 +33,8 @@ import { useModelsStore } from "@/stores/modelsStore";
 import { useDigitalTwinsStore } from "@/stores/digitalTwinsStore";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { fetchDomainModels } from "@/utils/sampleDataLoader";
+import { generateSampleTwinsForDomain } from "@/utils/sampleTwinGenerator";
 import {
-  generateSampleTwins,
-  getRecommendedTwinCount,
 } from "@/utils/sampleTwinGenerator";
 import { toast } from "sonner";
 
@@ -40,6 +42,15 @@ interface OnboardingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+// Demo connection configuration
+const DEMO_CONNECTION = {
+  id: "demo",
+  name: "Demo Environment",
+  adtHost: "demo.api.graph.konnektr.io",
+  authProvider: "none" as const,
+  description: "Public demo environment with sample data",
+} as const;
 
 const SAMPLE_DOMAINS = [
   {
@@ -86,8 +97,16 @@ export function OnboardingDialog({
   const currentConnection = useConnectionStore((state) =>
     state.getCurrentConnection()
   );
+  const addConnection = useConnectionStore((state) => state.addConnection);
+  const setCurrentConnection = useConnectionStore(
+    (state) => state.setCurrentConnection
+  );
+  const getAllConnections = useConnectionStore((state) =>
+    state.getAllConnections()
+  );
   const uploadModels = useModelsStore((state) => state.uploadModels);
   const createTwin = useDigitalTwinsStore((state) => state.createTwin);
+  const createRelationship = useDigitalTwinsStore((state) => state.createRelationship);
   const loadModels = useModelsStore((state) => state.loadModels);
   const setHasSeenOnboarding = useWorkspaceStore(
     (state) => state.setHasSeenOnboarding
@@ -95,6 +114,76 @@ export function OnboardingDialog({
   const dismissOnboarding = useWorkspaceStore(
     (state) => state.dismissOnboarding
   );
+
+  // Wrapper to match expected signature and preserve Auth0 context
+  const getTokenSilently = async (options?: {
+    authorizationParams?: { audience?: string; scope?: string };
+  }) => {
+    return await getAccessTokenSilently(options);
+  };
+
+  // Wrapper to match expected signature and preserve Auth0 context
+  const getTokenWithPopup = async (options?: {
+    authorizationParams?: { audience?: string; scope?: string };
+  }) => {
+    const token = await getAccessTokenWithPopup(options);
+    if (!token) throw new Error("Failed to get token with popup");
+    return token;
+  };
+
+  const handleLoadDemo = async () => {
+    try {
+      // Check if demo connection already exists
+      const existingDemo = getAllConnections.find(
+        (c) => c.adtHost === DEMO_CONNECTION.adtHost
+      );
+
+      if (existingDemo) {
+        // Just switch to existing demo connection
+        await setCurrentConnection(existingDemo.id);
+        toast.success("Connected to demo environment");
+      } else {
+        // Add new demo connection
+        addConnection(DEMO_CONNECTION);
+        await setCurrentConnection(DEMO_CONNECTION.id);
+        toast.success("Connected to demo environment", {
+          description: "Explore the pre-loaded sample data in the graph",
+        });
+      }
+
+      setHasSeenOnboarding(true);
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Failed to connect to demo:", error);
+      toast.error("Failed to connect to demo environment");
+    }
+  };
+
+  const handleDeployNew = () => {
+    window.open(
+      "https://ktrlplane.konnektr.io/resources/create?resource_type=Konnektr.Graph&sku=standard&utm_source=graph_explorer&utm_medium=app&utm_campaign=onboarding",
+      "_blank"
+    );
+    // Keep dialog open - user might want to try demo while waiting for deployment
+  };
+
+  const handleConnectCustom = () => {
+    onOpenChange(false);
+    // Trigger the connection selector "Add" button
+    setTimeout(() => {
+      const addButton = document.querySelector(
+        '[data-testid="add-connection-button"]'
+      ) as HTMLButtonElement;
+      if (!addButton) {
+        // Fallback: find by text content
+        const buttons = Array.from(document.querySelectorAll("button"));
+        const found = buttons.find((b) => b.textContent?.trim() === "Add");
+        found?.click();
+      } else {
+        addButton.click();
+      }
+    }, 100);
+  };
 
   const handleLoadSamples = async (domain: string) => {
     setIsLoading(true);
@@ -130,23 +219,34 @@ export function OnboardingDialog({
         description: `Imported ${domainModels.length} models. Now generating sample twins...`,
       });
 
-      // Generate and create sample twins
-      let totalTwinsCreated = 0;
-      for (const model of domainModels) {
-        const twinCount = getRecommendedTwinCount(model);
-        if (twinCount > 0) {
-          const sampleTwins = generateSampleTwins(model, twinCount);
 
-          // Create twins one by one
-          for (const twinData of sampleTwins) {
-            try {
-              await createTwin(twinData, authCallbacks);
-              totalTwinsCreated++;
-            } catch (err) {
-              console.warn(`Failed to create twin ${twinData.$dtId}:`, err);
-              // Continue with next twin
-            }
-          }
+      // Generate all sample twins and relationships for the domain
+      const { twins: sampleTwins, relationships: sampleRelationships } = generateSampleTwinsForDomain(
+        domainModels,
+        undefined // use default per-model count logic
+      );
+
+      // Create twins one by one
+      let totalTwinsCreated = 0;
+      for (const twinData of sampleTwins) {
+        try {
+          await createTwin(twinData, authCallbacks);
+          totalTwinsCreated++;
+        } catch (err) {
+          console.warn(`Failed to create twin ${twinData.$dtId}:`, err);
+          // Continue with next twin
+        }
+      }
+
+      // Create relationships one by one
+      let totalRelationshipsCreated = 0;
+      for (const relData of sampleRelationships) {
+        try {
+          await createRelationship(relData, authCallbacks);
+          totalRelationshipsCreated++;
+        } catch (err) {
+          console.warn(`Failed to create relationship ${relData.$relationshipId}:`, err);
+          // Continue with next relationship
         }
       }
 
@@ -191,140 +291,306 @@ export function OnboardingDialog({
             </DialogTitle>
           </div>
           <DialogDescription className="text-base pt-2">
-            Let's get you started with your digital twin environment
+            {!currentConnection
+              ? "Choose how you'd like to get started with your digital twin environment"
+              : "Let's get you started with your digital twin environment"}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Explanation Section */}
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold mb-2">How It Works</h3>
-              <div className="space-y-2 text-sm text-muted-foreground">
-                <div className="flex items-start gap-3">
-                  <Badge variant="outline" className="mt-0.5">
-                    1
-                  </Badge>
-                  <div>
-                    <strong className="text-foreground">
-                      Load Data Models (DTDL)
-                    </strong>
-                    <p>
-                      Define the structure and properties of your digital twins
-                      using Digital Twin Definition Language
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Badge variant="outline" className="mt-0.5">
-                    2
-                  </Badge>
-                  <div>
-                    <strong className="text-foreground">Create Twins</strong>
-                    <p>
-                      Create instances (twins) based on your models with actual
-                      data and properties
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Badge variant="outline" className="mt-0.5">
-                    3
-                  </Badge>
-                  <div>
-                    <strong className="text-foreground">
-                      Build Relationships
-                    </strong>
-                    <p>
-                      Connect twins together to represent real-world
-                      relationships and hierarchies
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Badge variant="outline" className="mt-0.5">
-                    4
-                  </Badge>
-                  <div>
-                    <strong className="text-foreground">
-                      Query & Visualize
-                    </strong>
-                    <p>
-                      Use Cypher queries to explore your data and visualize
-                      relationships in the graph view
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Sample Domains */}
-          <div>
-            <h3 className="text-lg font-semibold mb-3">Load Sample Data</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Choose a sample domain to get started quickly. This will import
-              models and create sample twins.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {SAMPLE_DOMAINS.map((domain) => {
-                const Icon = domain.icon;
-                const loading = isLoading && selectedDomain === domain.id;
-                return (
+          {/* New User Flow - No Connection */}
+          {!currentConnection && (
+            <>
+              {/* Quick Start Section */}
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold">Quick Start Options</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {/* Demo Environment */}
                   <Card
-                    key={domain.id}
                     className="cursor-pointer hover:border-primary transition-colors"
-                    onClick={() => !isLoading && handleLoadSamples(domain.id)}
+                    onClick={handleLoadDemo}
                   >
                     <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <Icon className="w-8 h-8 text-primary" />
-                        <Badge variant="secondary">
-                          {domain.models} models
-                        </Badge>
-                      </div>
-                      <CardTitle className="text-base">{domain.name}</CardTitle>
+                      <Zap className="w-8 h-8 text-primary mb-2" />
+                      <Badge variant="secondary" className="w-fit mb-2">
+                        No Setup Required
+                      </Badge>
+                      <CardTitle className="text-base">
+                        Try Demo Environment
+                      </CardTitle>
                       <CardDescription className="text-xs">
-                        {domain.description}
+                        Instant access to pre-loaded sample data. Perfect for
+                        exploring features.
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-0">
-                      <Button size="sm" className="w-full" disabled={isLoading}>
-                        {loading ? "Loading..." : "Load This Sample"}
+                      <Button size="sm" className="w-full">
+                        Connect to Demo
                       </Button>
                     </CardContent>
                   </Card>
-                );
-              })}
-            </div>
-          </div>
 
-          {/* Alternative Options */}
-          <div className="border-t pt-4">
-            <h3 className="text-sm font-semibold mb-3">
-              Or Start From Scratch
-            </h3>
-            <div className="flex gap-2 flex-wrap">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  onOpenChange(false);
-                  // Trigger the import dialog in ModelSidebar
-                  const importButton = document.querySelector(
-                    "[data-import-models]"
-                  ) as HTMLButtonElement;
-                  importButton?.click();
-                }}
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Import Your Own Models
-              </Button>
-              <Button variant="ghost" onClick={handleSkip}>
-                <X className="w-4 h-4 mr-2" />
-                Skip Onboarding
-              </Button>
-            </div>
-          </div>
+                  {/* Deploy New */}
+                  <Card
+                    className="cursor-pointer hover:border-primary transition-colors"
+                    onClick={handleDeployNew}
+                  >
+                    <CardHeader className="pb-3">
+                      <Cloud className="w-8 h-8 text-primary mb-2" />
+                      <Badge variant="secondary" className="w-fit mb-2">
+                        Production Ready
+                      </Badge>
+                      <CardTitle className="text-base">
+                        Deploy on KtrlPlane
+                      </CardTitle>
+                      <CardDescription className="text-xs">
+                        Fully managed instance with automatic scaling and
+                        backups.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <Button size="sm" className="w-full" variant="outline">
+                        Deploy New Instance
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  {/* Custom Connection */}
+                  <Card
+                    className="cursor-pointer hover:border-primary transition-colors"
+                    onClick={handleConnectCustom}
+                  >
+                    <CardHeader className="pb-3">
+                      <Globe className="w-8 h-8 text-primary mb-2" />
+                      <Badge variant="secondary" className="w-fit mb-2">
+                        Advanced
+                      </Badge>
+                      <CardTitle className="text-base">
+                        Connect Custom Instance
+                      </CardTitle>
+                      <CardDescription className="text-xs">
+                        Connect to your own Azure Digital Twins or self-hosted
+                        instance.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <Button size="sm" className="w-full" variant="outline">
+                        Add Connection
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+
+              {/* How It Works */}
+              <div className="border-t pt-4">
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">How It Works</h3>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <div className="flex items-start gap-3">
+                      <Badge variant="outline" className="mt-0.5">
+                        1
+                      </Badge>
+                      <div>
+                        <strong className="text-foreground">
+                          Load Data Models (DTDL)
+                        </strong>
+                        <p>
+                          Define the structure and properties of your digital
+                          twins using Digital Twin Definition Language
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Badge variant="outline" className="mt-0.5">
+                        2
+                      </Badge>
+                      <div>
+                        <strong className="text-foreground">
+                          Create Twins
+                        </strong>
+                        <p>
+                          Create instances (twins) based on your models with
+                          actual data and properties
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Badge variant="outline" className="mt-0.5">
+                        3
+                      </Badge>
+                      <div>
+                        <strong className="text-foreground">
+                          Build Relationships
+                        </strong>
+                        <p>
+                          Connect twins together to represent real-world
+                          relationships and hierarchies
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Badge variant="outline" className="mt-0.5">
+                        4
+                      </Badge>
+                      <div>
+                        <strong className="text-foreground">
+                          Query & Visualize
+                        </strong>
+                        <p>
+                          Use Cypher queries to explore your data and visualize
+                          relationships in the graph view
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Existing User Flow - Has Connection */}
+          {currentConnection && (
+            <>
+              {/* Explanation Section */}
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">How It Works</h3>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <div className="flex items-start gap-3">
+                      <Badge variant="outline" className="mt-0.5">
+                        1
+                      </Badge>
+                      <div>
+                        <strong className="text-foreground">
+                          Load Data Models (DTDL)
+                        </strong>
+                        <p>
+                          Define the structure and properties of your digital
+                          twins using Digital Twin Definition Language
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Badge variant="outline" className="mt-0.5">
+                        2
+                      </Badge>
+                      <div>
+                        <strong className="text-foreground">Create Twins</strong>
+                        <p>
+                          Create instances (twins) based on your models with
+                          actual data and properties
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Badge variant="outline" className="mt-0.5">
+                        3
+                      </Badge>
+                      <div>
+                        <strong className="text-foreground">
+                          Build Relationships
+                        </strong>
+                        <p>
+                          Connect twins together to represent real-world
+                          relationships and hierarchies
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Badge variant="outline" className="mt-0.5">
+                        4
+                      </Badge>
+                      <div>
+                        <strong className="text-foreground">
+                          Query & Visualize
+                        </strong>
+                        <p>
+                          Use Cypher queries to explore your data and visualize
+                          relationships in the graph view
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sample Domains */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Load Sample Data</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Choose a sample domain to get started quickly. This will
+                  import models and create sample twins.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {SAMPLE_DOMAINS.map((domain) => {
+                    const Icon = domain.icon;
+                    const loading = isLoading && selectedDomain === domain.id;
+                    return (
+                      <Card
+                        key={domain.id}
+                        className="cursor-pointer hover:border-primary transition-colors"
+                        onClick={() => !isLoading && handleLoadSamples(domain.id)}
+                      >
+                        <CardHeader className="pb-3">
+                          <div className="flex items-start justify-between">
+                            <Icon className="w-8 h-8 text-primary" />
+                            <Badge variant="secondary">
+                              {domain.models} models
+                            </Badge>
+                          </div>
+                          <CardTitle className="text-base">{domain.name}</CardTitle>
+                          <CardDescription className="text-xs">
+                            {domain.description}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                          <Button size="sm" className="w-full" disabled={isLoading}>
+                            {loading ? "Loading..." : "Load This Sample"}
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Alternative Options for users with connection */}
+              <div className="border-t pt-4">
+                <h3 className="text-sm font-semibold mb-3">
+                  Other Options
+                </h3>
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      onOpenChange(false);
+                      // Trigger the import dialog in ModelSidebar
+                      const importButton = document.querySelector(
+                        "[data-import-models]"
+                      ) as HTMLButtonElement;
+                      importButton?.click();
+                    }}
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Import Your Own Models
+                  </Button>
+                  <Button variant="outline" onClick={handleLoadDemo}>
+                    <Zap className="w-4 h-4 mr-2" />
+                    Try Demo Environment
+                  </Button>
+                  <Button variant="outline" onClick={handleDeployNew}>
+                    <Cloud className="w-4 h-4 mr-2" />
+                    Deploy on KtrlPlane
+                  </Button>
+                  <Button variant="ghost" onClick={handleSkip}>
+                    <X className="w-4 h-4 mr-2" />
+                    Skip Onboarding
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>
