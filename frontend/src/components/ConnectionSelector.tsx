@@ -471,7 +471,7 @@ export function ConnectionSelector(): React.ReactElement {
       />
       <Dialog open={open} onOpenChange={handleDialogOpenChange}>
         <DialogTrigger asChild>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" data-testid="add-connection-button">
             Add
           </Button>
         </DialogTrigger>
