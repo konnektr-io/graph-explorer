@@ -1,8 +1,19 @@
 import { useState, useEffect, useCallback } from "react";
-import { FileText, Database, GitBranch, Plus, ArrowRight, ArrowLeft, Trash2 } from "lucide-react";
+import {
+  FileText,
+  Database,
+  GitBranch,
+  Plus,
+  ArrowRight,
+  ArrowLeft,
+  Trash2,
+  Edit2,
+  X,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EditableProperty } from "./EditableProperty";
+import { ModelSelector } from "./ModelSelector";
 import { useDigitalTwinsStore } from "@/stores/digitalTwinsStore";
 import { useInspectorStore } from "@/stores/inspectorStore";
 import type { DigitalTwinPropertyMetadata, BasicRelationship } from "@/types";
@@ -19,8 +30,13 @@ interface TwinInspectorProps {
 }
 
 export function TwinInspector({ twinId }: TwinInspectorProps) {
-  const { getTwin, getTwinById, updateTwinProperty, queryRelationships, deleteRelationship } =
-    useDigitalTwinsStore();
+  const {
+    getTwin,
+    getTwinById,
+    updateTwinProperty,
+    queryRelationships,
+    deleteRelationship,
+  } = useDigitalTwinsStore();
   const { selectItem } = useInspectorStore();
   const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth0();
   const [isLoading, setIsLoading] = useState(false);
@@ -34,6 +50,8 @@ export function TwinInspector({ twinId }: TwinInspectorProps) {
   const [isLoadingRels, setIsLoadingRels] = useState(false);
   const [showCreateRelDialog, setShowCreateRelDialog] = useState(false);
   const [deletingRelId, setDeletingRelId] = useState<string | null>(null);
+  const [isEditingModel, setIsEditingModel] = useState(false);
+  const [isSavingModel, setIsSavingModel] = useState(false);
 
   const authCallbacks = {
     getAccessTokenSilently,
@@ -67,16 +85,29 @@ export function TwinInspector({ twinId }: TwinInspectorProps) {
     setIsLoadingRels(true);
     try {
       // Query outgoing relationships (where this twin is source)
-      const outgoing = await queryRelationships(twinId, "outgoing", authCallbacks);
+      const outgoing = await queryRelationships(
+        twinId,
+        "outgoing",
+        authCallbacks
+      );
       // Query incoming relationships (where this twin is target)
-      const incoming = await queryRelationships(twinId, "incoming", authCallbacks);
+      const incoming = await queryRelationships(
+        twinId,
+        "incoming",
+        authCallbacks
+      );
       setRelationships({ outgoing, incoming });
     } catch (err) {
       console.error("Failed to load relationships:", err);
     } finally {
       setIsLoadingRels(false);
     }
-  }, [twinId, queryRelationships, getAccessTokenSilently, getAccessTokenWithPopup]);
+  }, [
+    twinId,
+    queryRelationships,
+    getAccessTokenSilently,
+    getAccessTokenWithPopup,
+  ]);
 
   useEffect(() => {
     loadRelationships();
@@ -120,7 +151,10 @@ export function TwinInspector({ twinId }: TwinInspectorProps) {
     (key) => key !== "$etag" && key !== "$metadata" && key !== "$dtId"
   );
 
-  const handlePropertySave = async (propertyName: string, newValue: unknown) => {
+  const handlePropertySave = async (
+    propertyName: string,
+    newValue: unknown
+  ) => {
     // Basic type conversion based on schema
     const definition = propertyDefinitions[propertyName];
     let typedValue = newValue;
@@ -141,6 +175,25 @@ export function TwinInspector({ twinId }: TwinInspectorProps) {
     await updateTwinProperty(twinId, propertyName, typedValue, authCallbacks);
   };
 
+  const handleModelUpdate = async (newModelId: string) => {
+    setIsSavingModel(true);
+    try {
+      // Update the model using the special metadata path
+      await updateTwinProperty(
+        twinId,
+        "$metadata/$model",
+        newModelId,
+        authCallbacks
+      );
+      setIsEditingModel(false);
+    } catch (error) {
+      console.error("Failed to update model:", error);
+      // TODO: Show error toast
+    } finally {
+      setIsSavingModel(false);
+    }
+  };
+
   const handleRelationshipClick = (rel: BasicRelationship) => {
     selectItem({
       type: "relationship",
@@ -159,7 +212,11 @@ export function TwinInspector({ twinId }: TwinInspectorProps) {
   const handleDeleteRelationship = async (rel: BasicRelationship) => {
     setDeletingRelId(rel.$relationshipId);
     try {
-      await deleteRelationship(rel.$sourceId, rel.$relationshipId, authCallbacks);
+      await deleteRelationship(
+        rel.$sourceId,
+        rel.$relationshipId,
+        authCallbacks
+      );
       // Refresh relationships after deletion
       await loadRelationships();
     } catch (err) {
@@ -169,7 +226,8 @@ export function TwinInspector({ twinId }: TwinInspectorProps) {
     }
   };
 
-  const totalRelationships = relationships.outgoing.length + relationships.incoming.length;
+  const totalRelationships =
+    relationships.outgoing.length + relationships.incoming.length;
 
   return (
     <div className="space-y-4">
@@ -186,17 +244,42 @@ export function TwinInspector({ twinId }: TwinInspectorProps) {
               {$dtId}
             </code>
           </div>
-          <div className="flex justify-between items-center text-sm">
+          <div className="flex justify-between items-start text-sm">
             <span className="text-muted-foreground">Model</span>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-xs">
-                {modelDisplayName}
-              </Badge>
-            </div>
+            {isEditingModel ? (
+              <div className="flex items-center gap-2 flex-1 min-w-0 ml-2">
+                <div className="flex-1 min-w-0">
+                  <ModelSelector
+                    value={$metadata.$model}
+                    onChange={handleModelUpdate}
+                    disabled={isSavingModel}
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 w-6 p-0 shrink-0"
+                  onClick={() => setIsEditingModel(false)}
+                  disabled={isSavingModel}
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              </div>
+            ) : (
+              <div
+                className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 px-2 py-1 rounded group"
+                onClick={() => setIsEditingModel(true)}
+              >
+                <Badge variant="outline" className="text-xs">
+                  {modelDisplayName}
+                </Badge>
+                <Edit2 className="w-3 h-3 opacity-0 group-hover:opacity-50 transition-opacity" />
+              </div>
+            )}
           </div>
           <div className="flex justify-between items-start text-sm">
             <span className="text-muted-foreground">Model ID</span>
-            <code className="font-mono text-xs text-right break-all max-w-[200px] select-all">
+            <code className="font-mono text-xs text-right break-all select-all">
               {$metadata.$model}
             </code>
           </div>

@@ -38,7 +38,7 @@ export function ModelInspector({ modelId }: ModelInspectorProps) {
         <div className="space-y-2">
           <div className="flex justify-between items-start text-sm">
             <span className="text-muted-foreground">Model ID</span>
-            <code className="font-mono text-xs bg-muted px-2 py-1 rounded break-all max-w-[200px] text-right">
+            <code className="font-mono text-xs bg-muted px-2 py-1 rounded break-all text-right">
               {model?.["@id"] || ""}
             </code>
           </div>
@@ -65,7 +65,7 @@ export function ModelInspector({ modelId }: ModelInspectorProps) {
           {model?.description && (
             <div className="flex justify-between items-start text-sm">
               <span className="text-muted-foreground">Description</span>
-              <span className="text-right text-xs max-w-[200px] break-words">
+              <span className="text-right text-xs break-words">
                 {(() => {
                   if (typeof model?.description === "string")
                     return model.description;
