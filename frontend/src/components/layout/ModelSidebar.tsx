@@ -27,6 +27,7 @@ import { useModelsStore } from "@/stores/modelsStore";
 import { useConnectionStore } from "@/stores/connectionStore";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useDigitalTwinsStore } from "@/stores/digitalTwinsStore";
+import { useQueryStore } from "@/stores/queryStore";
 import { getModelDisplayName } from "@/utils/dtdlHelpers";
 import type { DigitalTwinsModelDataExtended } from "@/types";
 import { ImportModelsDialog } from "./ImportModelsDialog";
@@ -39,7 +40,8 @@ function buildModelTree(
   models: DigitalTwinsModelDataExtended[],
   twinCounts: Record<string, number>,
   onDelete: (modelId: string) => void,
-  onCreateTwin: (modelId: string) => void
+  onCreateTwin: (modelId: string) => void,
+  onQueryTwins: (modelId: string) => void
 ): TreeDataItem[] {
   if (models.length === 0) return [];
 
@@ -115,7 +117,15 @@ function buildModelTree(
           className="flex items-center gap-1"
           onClick={(e) => e.stopPropagation()}
         >
-          <Badge variant="secondary" className="text-xs">
+          <Badge
+            variant="secondary"
+            className="text-xs cursor-pointer hover:bg-secondary/80 transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              onQueryTwins(modelId);
+            }}
+            title="Click to query all twins of this model"
+          >
             {count}
           </Badge>
           <div
@@ -178,6 +188,7 @@ export function ModelSidebar() {
 
   const selectedItem = useInspectorStore((state) => state.selectedItem);
   const selectItem = useInspectorStore((state) => state.selectItem);
+  const { setCurrentQuery, executeQuery } = useQueryStore();
   const {
     models,
     loadModels,
@@ -257,6 +268,21 @@ export function ModelSidebar() {
     setCreateTwinDialogOpen(true);
   };
 
+  const handleQueryTwins = async (modelId: string) => {
+    // Build query to select all twins of this model
+    // Use Cypher for KtrlPlane/Konnektr, ADT query for Azure Digital Twins
+    const isKtrlPlane =
+      currentConnection?.authProvider === "ktrlplane" ||
+      currentConnection?.adtHost.includes("konnektr.io");
+
+    const query = isKtrlPlane
+      ? `MATCH (t:Twin) WHERE digitaltwins.is_of_model(t,'${modelId}') RETURN t`
+      : `SELECT * FROM DIGITALTWINS WHERE IS_OF_MODEL('${modelId}')`;
+
+    setCurrentQuery(query);
+    await executeQuery(query, getAccessTokenSilently, getTokenWithPopup);
+  };
+
   const handleImportClick = () => {
     // Default to paste mode, but dialog opens and remembers or resets
     setImportMode("paste");
@@ -268,7 +294,8 @@ export function ModelSidebar() {
     models,
     twinCounts,
     handleDeleteModel,
-    handleCreateTwin
+    handleCreateTwin,
+    handleQueryTwins
   );
 
   // Filter tree recursively

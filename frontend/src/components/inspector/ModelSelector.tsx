@@ -184,8 +184,11 @@ export function ModelSelector({
       <div key={node.id}>
         <div
           className={cn(
-            "flex items-center gap-1 px-2 py-1.5 text-xs cursor-pointer hover:bg-muted/50 rounded-sm",
-            isSelected && "bg-muted"
+            "flex items-center gap-1 px-2 py-1.5 text-xs cursor-pointer rounded-sm",
+            isSelected
+              ? "bg-muted/70 text-foreground"
+              : "bg-muted/40 text-foreground hover:bg-muted/60",
+            "transition-colors"
           )}
           style={{ paddingLeft: `${node.depth * 12 + 8}px` }}
           onClick={() => {
@@ -216,7 +219,7 @@ export function ModelSelector({
               isSelected ? "opacity-100" : "opacity-0"
             )}
           />
-          <span className="truncate flex-1">{node.name}</span>
+          <span className="truncate flex-1 text-foreground">{node.name}</span>
         </div>
         {hasChildren && isExpanded && (
           <div>{node.children!.map((child) => renderTreeNode(child))}</div>
