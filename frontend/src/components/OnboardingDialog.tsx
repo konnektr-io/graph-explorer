@@ -300,29 +300,33 @@ export function OnboardingDialog({
               {/* Quick Start Section */}
               <div className="space-y-3">
                 <h3 className="text-lg font-semibold">Quick Start Options</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="space-y-2">
                   {/* Demo Environment */}
                   <Card
                     className="cursor-pointer hover:border-primary transition-colors"
                     onClick={handleLoadDemo}
                   >
-                    <CardHeader className="pb-3">
-                      <Zap className="w-8 h-8 text-primary mb-2" />
-                      <Badge variant="secondary" className="w-fit mb-2">
-                        No Setup Required
-                      </Badge>
-                      <CardTitle className="text-base">
-                        Try Demo Environment
-                      </CardTitle>
-                      <CardDescription className="text-xs">
-                        Instant access to pre-loaded sample data. Perfect for
-                        exploring features.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <Button size="sm" className="w-full">
-                        Connect to Demo
-                      </Button>
+                    <CardContent className="p-3">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                        <Zap className="w-8 h-8 text-primary flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <CardTitle className="text-base">
+                              Try Demo Environment
+                            </CardTitle>
+                            <Badge variant="secondary" className="text-xs">
+                              No Setup Required
+                            </Badge>
+                          </div>
+                          <CardDescription className="text-xs">
+                            Instant access to pre-loaded sample data. Perfect for
+                            exploring features.
+                          </CardDescription>
+                        </div>
+                        <Button size="sm" className="w-full sm:w-auto flex-shrink-0">
+                          Connect to Demo
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
 
@@ -331,23 +335,27 @@ export function OnboardingDialog({
                     className="cursor-pointer hover:border-primary transition-colors"
                     onClick={handleDeployNew}
                   >
-                    <CardHeader className="pb-3">
-                      <Cloud className="w-8 h-8 text-primary mb-2" />
-                      <Badge variant="secondary" className="w-fit mb-2">
-                        Production Ready
-                      </Badge>
-                      <CardTitle className="text-base">
-                        Deploy on KtrlPlane
-                      </CardTitle>
-                      <CardDescription className="text-xs">
-                        Fully managed instance with automatic scaling and
-                        backups.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <Button size="sm" className="w-full" variant="outline">
-                        Deploy New Instance
-                      </Button>
+                    <CardContent className="p-3">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                        <Cloud className="w-8 h-8 text-primary flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <CardTitle className="text-base">
+                              Deploy on KtrlPlane
+                            </CardTitle>
+                            <Badge variant="secondary" className="text-xs">
+                              Production Ready
+                            </Badge>
+                          </div>
+                          <CardDescription className="text-xs">
+                            Fully managed instance with automatic scaling and
+                            backups.
+                          </CardDescription>
+                        </div>
+                        <Button size="sm" variant="outline" className="w-full sm:w-auto flex-shrink-0">
+                          Deploy New Instance
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
 
@@ -356,23 +364,27 @@ export function OnboardingDialog({
                     className="cursor-pointer hover:border-primary transition-colors"
                     onClick={handleConnectCustom}
                   >
-                    <CardHeader className="pb-3">
-                      <Globe className="w-8 h-8 text-primary mb-2" />
-                      <Badge variant="secondary" className="w-fit mb-2">
-                        Advanced
-                      </Badge>
-                      <CardTitle className="text-base">
-                        Connect Custom Instance
-                      </CardTitle>
-                      <CardDescription className="text-xs">
-                        Connect to your own Azure Digital Twins or self-hosted
-                        instance.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <Button size="sm" className="w-full" variant="outline">
-                        Add Connection
-                      </Button>
+                    <CardContent className="p-3">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                        <Globe className="w-8 h-8 text-primary flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <CardTitle className="text-base">
+                              Connect Custom Instance
+                            </CardTitle>
+                            <Badge variant="secondary" className="text-xs">
+                              Advanced
+                            </Badge>
+                          </div>
+                          <CardDescription className="text-xs">
+                            Connect to your own Azure Digital Twins or self-hosted
+                            instance.
+                          </CardDescription>
+                        </div>
+                        <Button size="sm" variant="outline" className="w-full sm:w-auto flex-shrink-0">
+                          Add Connection
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
