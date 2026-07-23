@@ -30,7 +30,7 @@ ENV VITE_B2C_SCOPE=$VITE_B2C_SCOPE
 WORKDIR /app
 
 # Copy package files
-COPY frontend/package.json frontend/pnpm-lock.yaml ./
+COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 RUN npm install -g pnpm
 RUN pnpm install
 
