@@ -65,6 +65,8 @@ export interface Connection {
 
   // Managed source metadata (for auto-discovered connections)
   managedSource?: ManagedSource;
+  /** @deprecated Use `managedSource` instead. Kept for backward compatibility. */
+  isKtrlPlaneManaged?: boolean;
   ktrlPlaneResourceId?: string;
   ktrlPlaneProjectId?: string;
 
@@ -337,7 +339,7 @@ export const useConnectionStore = create<ConnectionState>()(
       },
 
       setArcadisConnections: (environments) => {
-        set((state) => {
+        set(() => {
           // If current connection is set to an Arcadis environment that still exists, keep it
           return {
             arcadisConnections: environments,
