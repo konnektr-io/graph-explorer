@@ -9,13 +9,18 @@ import { isLocalhost } from "@/utils/isLocalHost";
 export type AuthProvider = "msal" | "auth0" | "none" | "ktrlplane";
 
 /**
+ * Source that manages a connection (for auto-discovered environments)
+ */
+export type ManagedSource = "ktrlplane" | "arcadis" | "custom";
+
+/**
  * Authentication configuration for a connection
  */
 export interface AuthConfig {
   // For MSAL (Azure Digital Twins)
   clientId?: string;
   tenantId?: string;
-  scopes?: string[]; // Default: ["https://digitaltwins.azure.net/.default"]
+  scopes?: string[]; // Default: [https://digitaltwins.azure.net/.default]
 
   // For Auth0 (Konnektr hosted/self-hosted)
   // Note: clientId is reused for both MSAL and Auth0
@@ -28,23 +33,42 @@ export interface AuthConfig {
 
 /**
  * Digital Twins connection with authentication configuration
+ *
+ * Supports two routing modes:
+ * - **Host routing**: Set `adtHost` to send `x-adt-host` header (Konnektr Graph / ADT direct)
+ * - **Environment routing**: Set `environmentId` to send `x-adt-id` header (proxy-resolved)
  */
 export interface Connection {
   id: string;
   name: string;
+
+  /**
+   * Backend hostname for direct routing.
+   * When set, the custom pipeline policy sends `x-adt-host: <adtHost>`.
+   * Alternative to `environmentId` — only one should be set.
+   */
   adtHost: string;
+
+  /**
+   * Environment identifier for proxy-resolved routing.
+   * When set, the custom pipeline policy sends `x-adt-id: <environmentId>`.
+   * The proxy resolves this to the actual backend host internally.
+   * Alternative to `adtHost` — only one should be set.
+   */
+  environmentId?: string;
+
   description?: string;
 
   // Authentication
   authProvider: AuthProvider;
   authConfig?: AuthConfig;
 
-  // KtrlPlane metadata (for connections from KtrlPlane)
-  isKtrlPlaneManaged?: boolean;
+  // Managed source metadata (for auto-discovered connections)
+  managedSource?: ManagedSource;
   ktrlPlaneResourceId?: string;
   ktrlPlaneProjectId?: string;
 
-  // KtrlPlane resource status (optional, only for managed connections)
+  // Resource status (optional, only for managed connections)
   status?: string;
 
   // Internal fields for matching (prefixed with _ to indicate they're not user-facing)
@@ -55,6 +79,7 @@ export interface Connection {
 interface ConnectionState {
   connections: Connection[];
   ktrlPlaneConnections: Connection[]; // Connections from KtrlPlane (not persisted)
+  arcadisConnections: Connection[]; // Connections from Arcadis environments API (not persisted)
   currentConnectionId: string | null;
   dismissedBanners: Set<string>; // Track dismissed connection banners by connection ID
 
@@ -68,6 +93,7 @@ interface ConnectionState {
   dismissBanner: (connectionId: string) => void;
   isBannerDismissed: (connectionId: string) => boolean;
   setKtrlPlaneConnections: (resources: KtrlPlaneResource[]) => void;
+  setArcadisConnections: (environments: Connection[]) => void;
   getAllConnections: () => Connection[]; // Returns merged connections
 }
 
@@ -78,6 +104,7 @@ export const useConnectionStore = create<ConnectionState>()(
     (set, get) => ({
       connections: defaultConnections,
       ktrlPlaneConnections: [],
+      arcadisConnections: [],
       currentConnectionId: defaultConnections[0]?.id || null,
       dismissedBanners: new Set<string>(),
 
@@ -110,11 +137,13 @@ export const useConnectionStore = create<ConnectionState>()(
         const state = get();
         console.log("Current state:", {
           ktrlPlaneConnections: state.ktrlPlaneConnections.length,
+          arcadisConnections: state.arcadisConnections.length,
           localConnections: state.connections.length,
           currentConnectionId: state.currentConnectionId,
         });
         const allConnections = [
           ...state.ktrlPlaneConnections,
+          ...state.arcadisConnections,
           ...state.connections,
         ];
         const conn = allConnections.find((c) => c.id === id);
@@ -154,6 +183,7 @@ export const useConnectionStore = create<ConnectionState>()(
         const state = get();
         const allConnections = [
           ...state.ktrlPlaneConnections,
+          ...state.arcadisConnections,
           ...state.connections,
         ];
         return (
@@ -165,6 +195,7 @@ export const useConnectionStore = create<ConnectionState>()(
         const state = get();
         const allConnections = [
           ...state.ktrlPlaneConnections,
+          ...state.arcadisConnections,
           ...state.connections,
         ];
         const conn = allConnections.find((c) => c.id === id);
@@ -224,6 +255,7 @@ export const useConnectionStore = create<ConnectionState>()(
             description: `Managed by KtrlPlane (${resource.sku})`,
             authProvider: "ktrlplane" as AuthProvider,
             isKtrlPlaneManaged: true,
+            managedSource: "ktrlplane" as ManagedSource,
             ktrlPlaneResourceId: resource.resource_id,
             ktrlPlaneProjectId: resource.project_id,
             status: resource.status, // Add status property
@@ -304,10 +336,27 @@ export const useConnectionStore = create<ConnectionState>()(
         console.log(`Configured ${connections.length} KtrlPlane connections`);
       },
 
+      setArcadisConnections: (environments) => {
+        set((state) => {
+          // If current connection is set to an Arcadis environment that still exists, keep it
+          return {
+            arcadisConnections: environments,
+          };
+        });
+
+        console.log(
+          `Configured ${environments.length} Arcadis environment(s)`
+        );
+      },
+
       getAllConnections: () => {
         const state = get();
-        // KtrlPlane connections first, then local connections
-        return [...state.ktrlPlaneConnections, ...state.connections];
+        // Managed connections first, then local connections
+        return [
+          ...state.ktrlPlaneConnections,
+          ...state.arcadisConnections,
+          ...state.connections,
+        ];
       },
     }),
     {

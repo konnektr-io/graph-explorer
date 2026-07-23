@@ -55,6 +55,9 @@ export function ConnectionSelector(): React.ReactElement {
   const ktrlPlaneConnections = useConnectionStore(
     (state) => state.ktrlPlaneConnections
   );
+  const arcadisConnections = useConnectionStore(
+    (state) => state.arcadisConnections
+  );
   const localConnections = useConnectionStore((state) => state.connections);
   const currentConnectionId = useConnectionStore(
     (state) => state.currentConnectionId
@@ -200,7 +203,7 @@ export function ConnectionSelector(): React.ReactElement {
   };
 
   const handleEdit = () => {
-    if (!currentConnection || currentConnection.isKtrlPlaneManaged) return;
+    if (!currentConnection || isManagedConnection(currentConnection)) return;
 
     setEditMode(true);
     setShowCustomForm(true);
@@ -322,16 +325,30 @@ export function ConnectionSelector(): React.ReactElement {
 
   const currentConnection =
     localConnections.find((c) => c.id === currentConnectionId) ||
-    ktrlPlaneConnections.find((c) => c.id === currentConnectionId);
+    ktrlPlaneConnections.find((c) => c.id === currentConnectionId) ||
+    arcadisConnections.find((c) => c.id === currentConnectionId);
+
+  /**
+   * Check if a connection is managed externally (KtrlPlane or Arcadis).
+   * Managed connections cannot be edited or deleted locally.
+   */
+  const isManagedConnection = (conn: typeof currentConnection): boolean => {
+    if (!conn) return false;
+    return (
+      conn.managedSource === "ktrlplane" ||
+      conn.managedSource === "arcadis" ||
+      conn.isKtrlPlaneManaged === true
+    );
+  };
 
   const canDeleteCurrent =
     currentConnection &&
-    !currentConnection.isKtrlPlaneManaged &&
+    !isManagedConnection(currentConnection) &&
     currentConnection.id !== "localhost";
 
   const canEditCurrent =
     currentConnection &&
-    !currentConnection.isKtrlPlaneManaged &&
+    !isManagedConnection(currentConnection) &&
     currentConnection.id !== "localhost";
 
   const handleDeleteClick = () => {
@@ -384,6 +401,35 @@ export function ConnectionSelector(): React.ReactElement {
                         title={conn.status}
                       >
                         {conn.status}
+                      </span>
+                    </div>
+                  </SelectItem>
+                );
+              })}
+            </SelectGroup>
+          )}
+          {arcadisConnections.length > 0 && (
+            <SelectGroup>
+              <SelectLabel>Arcadis Environments</SelectLabel>
+              {arcadisConnections.map((conn) => {
+                const isHealthy = conn.status !== "Unhealthy";
+                return (
+                  <SelectItem
+                    key={conn.id}
+                    value={conn.id}
+                    disabled={!isHealthy}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{conn.name}</span>
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded font-semibold ${
+                          isHealthy
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                        title={conn.status}
+                      >
+                        {conn.status || "Unknown"}
                       </span>
                     </div>
                   </SelectItem>

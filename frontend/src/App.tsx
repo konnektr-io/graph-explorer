@@ -9,6 +9,7 @@ import { Inspector } from "@/components/inspector/Inspector";
 import { OnboardingDialog } from "@/components/OnboardingDialog";
 import { KtrlPlaneAuthProvider } from "@/components/KtrlPlaneAuthProvider";
 import { KtrlPlaneConnectionManager } from "@/components/KtrlPlaneConnectionManager";
+import { ArcadisConnectionManager } from "@/components/ArcadisConnectionManager";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useConnectionStore } from "@/stores/connectionStore";
 import { useModelsStore } from "@/stores/modelsStore";
@@ -203,6 +204,7 @@ function App() {
   return (
     <KtrlPlaneAuthProvider>
       <KtrlPlaneConnectionManager />
+      <ArcadisConnectionManager />
       <ThemeProvider
         attribute="class"
         defaultTheme="system"

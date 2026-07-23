@@ -13,9 +13,15 @@ import {
 
 /**
  * Pipeline policy that rewrites URLs and adds custom headers
+ *
+ * Supports two routing modes:
+ * - **Host routing** (`x-adt-host`): The proxy routes to the specified backend hostname directly
+ * - **Environment routing** (`x-adt-id`): The proxy resolves the backend hostname internally
+ *   from the environment identifier (e.g., for proxy-resolved or tenant-aware deployments)
  */
 const createCustomProxyPolicy = (
   adtHost: string,
+  environmentId: string | undefined,
   pathRewrite: (path: string) => string
 ): PipelinePolicy => {
   return {
@@ -24,8 +30,14 @@ const createCustomProxyPolicy = (
       request: PipelineRequest,
       next: SendRequest
     ): Promise<PipelineResponse> => {
-      // Add custom header
-      request.headers.set("x-adt-host", adtHost);
+      // Add routing header based on connection type
+      if (environmentId) {
+        // Environment-based routing: proxy resolves the backend host internally
+        request.headers.set("x-adt-id", environmentId);
+      } else {
+        // Direct host routing: proxy forwards to the specified backend host
+        request.headers.set("x-adt-host", adtHost);
+      }
 
       // Rewrite URL
       const url = new URL(request.url);
@@ -109,7 +121,7 @@ export const digitalTwinsClientFactory = async (
     const _pathRewrite = (path: string) =>
       `${getTwinsProxyPath()}${path}`.replace(_pathRegex, "/");
 
-    const customPolicy = createCustomProxyPolicy(adtHost, _pathRewrite);
+    const customPolicy = createCustomProxyPolicy(adtHost, connection.environmentId, _pathRewrite);
 
     const client = new DigitalTwinsClient(
       `https://${adtHost}/`,
