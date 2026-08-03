@@ -9,7 +9,7 @@ import { Inspector } from "@/components/inspector/Inspector";
 import { OnboardingDialog } from "@/components/OnboardingDialog";
 import { KtrlPlaneAuthProvider } from "@/components/KtrlPlaneAuthProvider";
 import { KtrlPlaneConnectionManager } from "@/components/KtrlPlaneConnectionManager";
-import { ArcadisConnectionManager } from "@/components/ArcadisConnectionManager";
+import { EnvironmentConnectionManager } from "@/components/EnvironmentConnectionManager";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
 import { useConnectionStore } from "@/stores/connectionStore";
 import { useModelsStore } from "@/stores/modelsStore";
@@ -43,7 +43,7 @@ function App() {
       const existing = allConnections.find((c) => {
         // Match by exact host, external endpoint, or resource ID pattern
         return (
-          c.adtHost === adtHost ||
+          (c.adtHost && c.adtHost === adtHost) ||
           c._externalEndpoint === adtHost ||
           (c.ktrlPlaneResourceId && adtHost.includes(c.ktrlPlaneResourceId))
         );
@@ -146,6 +146,13 @@ function App() {
     }
   }, [currentConnectionId, models.length, hasSeenOnboarding, getAllConnections]);
 
+  // Whether any tracker is configured for this build. When nothing is
+  // configured (e.g. internal deployments built with an empty VITE_GTM_ID),
+  // the GTM plugin is omitted at build time and there is nothing to consent
+  // to — so the cookie banner is suppressed instead of asking about trackers
+  // that do not exist.
+  const hasTracking = Boolean(import.meta.env.VITE_GTM_ID);
+
   // Set GTM consent using gtag API
   const setConsent = (consent: "accepted" | "declined") => {
     if (typeof window !== "undefined") {
@@ -204,7 +211,7 @@ function App() {
   return (
     <KtrlPlaneAuthProvider>
       <KtrlPlaneConnectionManager />
-      <ArcadisConnectionManager />
+      <EnvironmentConnectionManager />
       <ThemeProvider
         attribute="class"
         defaultTheme="system"
@@ -269,12 +276,14 @@ function App() {
           {/* Status Bar */}
           {/* <StatusBar /> */}
 
-          {/* Cookie Consent Popup */}
-          <CookieConsent
-            variant="minimal"
-            onAcceptCallback={handleAccept}
-            onDeclineCallback={handleDecline}
-          />
+          {/* Cookie Consent Popup — only when a tracker is actually configured */}
+          {hasTracking && (
+            <CookieConsent
+              variant="minimal"
+              onAcceptCallback={handleAccept}
+              onDeclineCallback={handleDecline}
+            />
+          )}
 
           {/* Onboarding Dialog */}
           <OnboardingDialog

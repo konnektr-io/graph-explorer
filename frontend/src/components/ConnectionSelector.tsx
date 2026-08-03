@@ -41,6 +41,7 @@ import { Trash2, MoreVertical, RefreshCw, Pencil, Sprout } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth0 } from "@auth0/auth0-react";
 import { fetchGraphResources } from "@/services/ktrlplaneClient";
+import { ENVIRONMENTS_LABEL } from "@/services/environmentRouting";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,8 +56,8 @@ export function ConnectionSelector(): React.ReactElement {
   const ktrlPlaneConnections = useConnectionStore(
     (state) => state.ktrlPlaneConnections
   );
-  const arcadisConnections = useConnectionStore(
-    (state) => state.arcadisConnections
+  const environmentConnections = useConnectionStore(
+    (state) => state.environmentConnections
   );
   const localConnections = useConnectionStore((state) => state.connections);
   const currentConnectionId = useConnectionStore(
@@ -210,7 +211,7 @@ export function ConnectionSelector(): React.ReactElement {
     setEditingConnectionId(currentConnection.id);
     setForm({
       name: currentConnection.name,
-      adtHost: currentConnection.adtHost,
+      adtHost: currentConnection.adtHost ?? "",
       description: currentConnection.description || "",
       authProvider: currentConnection.authProvider,
       clientId: currentConnection.authConfig?.clientId || "",
@@ -326,17 +327,17 @@ export function ConnectionSelector(): React.ReactElement {
   const currentConnection =
     localConnections.find((c) => c.id === currentConnectionId) ||
     ktrlPlaneConnections.find((c) => c.id === currentConnectionId) ||
-    arcadisConnections.find((c) => c.id === currentConnectionId);
+    environmentConnections.find((c) => c.id === currentConnectionId);
 
   /**
-   * Check if a connection is managed externally (KtrlPlane or Arcadis).
+   * Check if a connection is managed externally (KtrlPlane or the environments API).
    * Managed connections cannot be edited or deleted locally.
    */
   const isManagedConnection = (conn: typeof currentConnection): boolean => {
     if (!conn) return false;
     return (
       conn.managedSource === "ktrlplane" ||
-      conn.managedSource === "arcadis" ||
+      conn.managedSource === "environments" ||
       conn.isKtrlPlaneManaged === true
     );
   };
@@ -408,10 +409,10 @@ export function ConnectionSelector(): React.ReactElement {
               })}
             </SelectGroup>
           )}
-          {arcadisConnections.length > 0 && (
+          {environmentConnections.length > 0 && (
             <SelectGroup>
-              <SelectLabel>Arcadis Environments</SelectLabel>
-              {arcadisConnections.map((conn) => {
+              <SelectLabel>{ENVIRONMENTS_LABEL}</SelectLabel>
+              {environmentConnections.map((conn) => {
                 const isHealthy = conn.status !== "Unhealthy";
                 return (
                   <SelectItem

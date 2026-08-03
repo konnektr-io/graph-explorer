@@ -273,7 +273,7 @@ export function ModelSidebar() {
     // Use Cypher for KtrlPlane/Konnektr, ADT query for Azure Digital Twins
     const isKtrlPlane =
       currentConnection?.authProvider === "ktrlplane" ||
-      currentConnection?.adtHost.includes("konnektr.io");
+      currentConnection?.adtHost?.includes("konnektr.io");
 
     const query = isKtrlPlane
       ? `MATCH (t:Twin) WHERE digitaltwins.is_of_model(t,'${modelId}') RETURN t`

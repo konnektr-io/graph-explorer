@@ -20,7 +20,7 @@ import {
  *   from the environment identifier (e.g., for proxy-resolved or tenant-aware deployments)
  */
 const createCustomProxyPolicy = (
-  adtHost: string,
+  adtHost: string | undefined,
   environmentId: string | undefined,
   pathRewrite: (path: string) => string
 ): PipelinePolicy => {
@@ -34,7 +34,7 @@ const createCustomProxyPolicy = (
       if (environmentId) {
         // Environment-based routing: proxy resolves the backend host internally
         request.headers.set("x-adt-id", environmentId);
-      } else {
+      } else if (adtHost) {
         // Direct host routing: proxy forwards to the specified backend host
         request.headers.set("x-adt-host", adtHost);
       }
@@ -57,8 +57,8 @@ const createCustomProxyPolicy = (
 const digitalTwinsClients: { [adtHost: string]: DigitalTwinsClient } = {};
 
 /**
- * Get the twins proxy path from environment or use default
- * TODO: Configure this properly in environment variables
+ * Get the twins proxy path the API requests are rewritten through.
+ * Configured per deployment via the `VITE_TWINS_PROXY` build arg.
  */
 const getTwinsProxyPath = (): string => {
   return import.meta.env.VITE_TWINS_PROXY || "/api/proxy";
@@ -83,10 +83,25 @@ export const digitalTwinsClientFactory = async (
     authorizationParams?: { audience?: string; scope?: string };
   }) => Promise<string | undefined>
 ): Promise<DigitalTwinsClient> => {
-  const { adtHost } = connection;
+  const { adtHost, environmentId } = connection;
 
-  // Cache key includes connection ID to support different auth configs for same host
-  const cacheKey = `${adtHost}:${connection.id}`;
+  if (!adtHost && !environmentId) {
+    throw new Error(
+      `Connection "${connection.id}" has neither adtHost nor environmentId set`
+    );
+  }
+
+  // Environment-routed requests are rewritten to the current origin by the
+  // pipeline policy, so there is no real backend host to build a URL from —
+  // use the current origin as the (ignored) base.
+  const baseHost = adtHost ?? window.location.host;
+
+  // Cache key is namespaced by routing mode so an environment-routed connection
+  // can never collide with a host-routed one that happens to share the origin.
+  // The connection ID keeps it unique per environment and per auth config.
+  const cacheKey = environmentId
+    ? `env:${environmentId}:${connection.id}`
+    : `host:${adtHost}:${connection.id}`;
 
   // For KtrlPlane connections, always create a new client to ensure fresh Auth0 context
   // For other auth providers, use cached client if available
@@ -121,10 +136,14 @@ export const digitalTwinsClientFactory = async (
     const _pathRewrite = (path: string) =>
       `${getTwinsProxyPath()}${path}`.replace(_pathRegex, "/");
 
-    const customPolicy = createCustomProxyPolicy(adtHost, connection.environmentId, _pathRewrite);
+    const customPolicy = createCustomProxyPolicy(
+      adtHost,
+      environmentId,
+      _pathRewrite
+    );
 
     const client = new DigitalTwinsClient(
-      `https://${adtHost}/`,
+      `https://${baseHost}/`,
       tokenCredential,
       {
         allowInsecureConnection: window.location.hostname === "localhost",

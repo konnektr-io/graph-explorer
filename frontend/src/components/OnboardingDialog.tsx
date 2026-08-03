@@ -128,7 +128,7 @@ export function OnboardingDialog({
       // Check if demo connection already exists
       const allConnections = [...ktrlPlaneConnections, ...connections];
       const existingDemo = allConnections.find(
-        (c) => c.adtHost === DEMO_CONNECTION.adtHost
+        (c) => c.adtHost && c.adtHost === DEMO_CONNECTION.adtHost
       );
 
       if (existingDemo) {
