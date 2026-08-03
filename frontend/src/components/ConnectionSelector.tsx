@@ -41,6 +41,7 @@ import { Trash2, MoreVertical, RefreshCw, Pencil, Sprout } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth0 } from "@auth0/auth0-react";
 import { fetchGraphResources } from "@/services/ktrlplaneClient";
+import { ENVIRONMENTS_LABEL } from "@/services/environmentRouting";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,6 +55,9 @@ export function ConnectionSelector(): React.ReactElement {
   const [showOnboardingDialog, setShowOnboardingDialog] = useState(false);
   const ktrlPlaneConnections = useConnectionStore(
     (state) => state.ktrlPlaneConnections
+  );
+  const environmentConnections = useConnectionStore(
+    (state) => state.environmentConnections
   );
   const localConnections = useConnectionStore((state) => state.connections);
   const currentConnectionId = useConnectionStore(
@@ -200,14 +204,14 @@ export function ConnectionSelector(): React.ReactElement {
   };
 
   const handleEdit = () => {
-    if (!currentConnection || currentConnection.isKtrlPlaneManaged) return;
+    if (!currentConnection || isManagedConnection(currentConnection)) return;
 
     setEditMode(true);
     setShowCustomForm(true);
     setEditingConnectionId(currentConnection.id);
     setForm({
       name: currentConnection.name,
-      adtHost: currentConnection.adtHost,
+      adtHost: currentConnection.adtHost ?? "",
       description: currentConnection.description || "",
       authProvider: currentConnection.authProvider,
       clientId: currentConnection.authConfig?.clientId || "",
@@ -322,16 +326,30 @@ export function ConnectionSelector(): React.ReactElement {
 
   const currentConnection =
     localConnections.find((c) => c.id === currentConnectionId) ||
-    ktrlPlaneConnections.find((c) => c.id === currentConnectionId);
+    ktrlPlaneConnections.find((c) => c.id === currentConnectionId) ||
+    environmentConnections.find((c) => c.id === currentConnectionId);
+
+  /**
+   * Check if a connection is managed externally (KtrlPlane or the environments API).
+   * Managed connections cannot be edited or deleted locally.
+   */
+  const isManagedConnection = (conn: typeof currentConnection): boolean => {
+    if (!conn) return false;
+    return (
+      conn.managedSource === "ktrlplane" ||
+      conn.managedSource === "environments" ||
+      conn.isKtrlPlaneManaged === true
+    );
+  };
 
   const canDeleteCurrent =
     currentConnection &&
-    !currentConnection.isKtrlPlaneManaged &&
+    !isManagedConnection(currentConnection) &&
     currentConnection.id !== "localhost";
 
   const canEditCurrent =
     currentConnection &&
-    !currentConnection.isKtrlPlaneManaged &&
+    !isManagedConnection(currentConnection) &&
     currentConnection.id !== "localhost";
 
   const handleDeleteClick = () => {
@@ -384,6 +402,35 @@ export function ConnectionSelector(): React.ReactElement {
                         title={conn.status}
                       >
                         {conn.status}
+                      </span>
+                    </div>
+                  </SelectItem>
+                );
+              })}
+            </SelectGroup>
+          )}
+          {environmentConnections.length > 0 && (
+            <SelectGroup>
+              <SelectLabel>{ENVIRONMENTS_LABEL}</SelectLabel>
+              {environmentConnections.map((conn) => {
+                const isHealthy = conn.status !== "Unhealthy";
+                return (
+                  <SelectItem
+                    key={conn.id}
+                    value={conn.id}
+                    disabled={!isHealthy}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{conn.name}</span>
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded font-semibold ${
+                          isHealthy
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`}
+                        title={conn.status}
+                      >
+                        {conn.status || "Unknown"}
                       </span>
                     </div>
                   </SelectItem>

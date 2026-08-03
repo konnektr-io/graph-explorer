@@ -9,6 +9,11 @@ import { isLocalhost } from "@/utils/isLocalHost";
 export type AuthProvider = "msal" | "auth0" | "none" | "ktrlplane";
 
 /**
+ * Source that manages a connection (for auto-discovered environments)
+ */
+export type ManagedSource = "ktrlplane" | "environments" | "custom";
+
+/**
  * Authentication configuration for a connection
  */
 export interface AuthConfig {
@@ -28,23 +33,46 @@ export interface AuthConfig {
 
 /**
  * Digital Twins connection with authentication configuration
+ *
+ * Supports two routing modes:
+ * - **Host routing**: Set `adtHost` to send `x-adt-host` header (Konnektr Graph / ADT direct)
+ * - **Environment routing**: Set `environmentId` to send `x-adt-id` header (proxy-resolved)
  */
 export interface Connection {
   id: string;
   name: string;
-  adtHost: string;
+
+  /**
+   * Backend hostname for direct routing.
+   * When set, the custom pipeline policy sends `x-adt-host: <adtHost>`.
+   * Alternative to `environmentId` — exactly one of the two must be set.
+   * Omitted for environment-routed connections, where the backend host is
+   * resolved by the proxy and the request URL is rewritten to the current origin.
+   */
+  adtHost?: string;
+
+  /**
+   * Environment identifier for proxy-resolved routing.
+   * When set, the custom pipeline policy sends `x-adt-id: <environmentId>`.
+   * The proxy resolves this to the actual backend host internally.
+   * Alternative to `adtHost` — only one should be set.
+   */
+  environmentId?: string;
+
   description?: string;
 
   // Authentication
   authProvider: AuthProvider;
   authConfig?: AuthConfig;
 
-  // KtrlPlane metadata (for connections from KtrlPlane)
+  // Managed source metadata (for auto-discovered connections)
+  managedSource?: ManagedSource;
+  /** @deprecated Use `managedSource` instead. Kept for backward compatibility. */
   isKtrlPlaneManaged?: boolean;
   ktrlPlaneResourceId?: string;
   ktrlPlaneProjectId?: string;
 
-  // KtrlPlane resource status (optional, only for managed connections)
+  // Resource status (optional, only for managed connections)
   status?: string;
 
   // Internal fields for matching (prefixed with _ to indicate they're not user-facing)
@@ -55,6 +83,7 @@ export interface Connection {
 interface ConnectionState {
   connections: Connection[];
   ktrlPlaneConnections: Connection[]; // Connections from KtrlPlane (not persisted)
+  environmentConnections: Connection[]; // Connections from the environments API (not persisted)
   currentConnectionId: string | null;
   dismissedBanners: Set<string>; // Track dismissed connection banners by connection ID
 
@@ -68,6 +97,7 @@ interface ConnectionState {
   dismissBanner: (connectionId: string) => void;
   isBannerDismissed: (connectionId: string) => boolean;
   setKtrlPlaneConnections: (resources: KtrlPlaneResource[]) => void;
+  setEnvironmentConnections: (environments: Connection[]) => void;
   getAllConnections: () => Connection[]; // Returns merged connections
 }
 
@@ -78,6 +108,7 @@ export const useConnectionStore = create<ConnectionState>()(
     (set, get) => ({
       connections: defaultConnections,
       ktrlPlaneConnections: [],
+      environmentConnections: [],
       currentConnectionId: defaultConnections[0]?.id || null,
       dismissedBanners: new Set<string>(),
 
@@ -106,19 +137,13 @@ export const useConnectionStore = create<ConnectionState>()(
       },
 
       setCurrentConnection: async (id) => {
-        console.log("setCurrentConnection called with id:", id);
         const state = get();
-        console.log("Current state:", {
-          ktrlPlaneConnections: state.ktrlPlaneConnections.length,
-          localConnections: state.connections.length,
-          currentConnectionId: state.currentConnectionId,
-        });
         const allConnections = [
           ...state.ktrlPlaneConnections,
+          ...state.environmentConnections,
           ...state.connections,
         ];
         const conn = allConnections.find((c) => c.id === id);
-        console.log("Found connection:", conn?.name, conn?.authProvider);
         if (conn) {
           // Clear previous connection data before switching
           // Import stores dynamically to avoid circular dependencies
@@ -131,16 +156,15 @@ export const useConnectionStore = create<ConnectionState>()(
           useInspectorStore.getState().clearSelection();
 
           set({ currentConnectionId: id });
-          console.log("Connection set to:", id); // For MSAL connections, just initialize the credential (don't call getToken yet)
-          // This ensures MSAL is ready and handles any redirect responses
+
+          // For MSAL connections, just initialize the credential (don't call
+          // getToken yet). This ensures MSAL is ready and handles any redirect
+          // responses; the actual token is acquired on the first API call.
           if (conn.authProvider === "msal") {
             try {
               // Import here to avoid circular dependencies
               const { getTokenCredential } = await import("@/services/auth");
-              // Just initialize - this handles redirects and sets up MSAL
-              // Actual token will be acquired when first API call is made
               await getTokenCredential(conn);
-              console.log("MSAL credential initialized and ready");
             } catch (error) {
               console.warn("Auth initialization:", error);
               // Don't fail the connection selection, just log the warning
@@ -154,6 +178,7 @@ export const useConnectionStore = create<ConnectionState>()(
         const state = get();
         const allConnections = [
           ...state.ktrlPlaneConnections,
+          ...state.environmentConnections,
           ...state.connections,
         ];
         return (
@@ -165,6 +190,7 @@ export const useConnectionStore = create<ConnectionState>()(
         const state = get();
         const allConnections = [
           ...state.ktrlPlaneConnections,
+          ...state.environmentConnections,
           ...state.connections,
         ];
         const conn = allConnections.find((c) => c.id === id);
@@ -224,6 +250,7 @@ export const useConnectionStore = create<ConnectionState>()(
             description: `Managed by KtrlPlane (${resource.sku})`,
             authProvider: "ktrlplane" as AuthProvider,
             isKtrlPlaneManaged: true,
+            managedSource: "ktrlplane" as ManagedSource,
             ktrlPlaneResourceId: resource.resource_id,
             ktrlPlaneProjectId: resource.project_id,
             status: resource.status, // Add status property
@@ -239,22 +266,26 @@ export const useConnectionStore = create<ConnectionState>()(
           let replacementConnectionId: string | null = null;
 
           const deduplicatedLocal = state.connections.filter((localConn) => {
+            // Environment-routed connections have no adtHost to match on.
+            const localHost = localConn.adtHost;
+            if (!localHost) return true;
+
             // Check if this local connection matches any KtrlPlane connection
             const matchingKtrlConn = connections.find((ktrlConn) => {
               // Match by exact host
-              if (localConn.adtHost === ktrlConn.adtHost) return true;
+              if (localHost === ktrlConn.adtHost) return true;
               // Match by external endpoint (query param will use this)
-              if (localConn.adtHost === ktrlConn._externalEndpoint) return true;
+              if (localHost === ktrlConn._externalEndpoint) return true;
               // Match by internal endpoint
               if (
                 ktrlConn._internalEndpoint &&
-                localConn.adtHost === ktrlConn._internalEndpoint
+                localHost === ktrlConn._internalEndpoint
               )
                 return true;
               // Match by resource ID pattern (e.g., "free-resource-1y1z" in either)
               if (
                 ktrlConn.ktrlPlaneResourceId &&
-                localConn.adtHost.includes(ktrlConn.ktrlPlaneResourceId)
+                localHost.includes(ktrlConn.ktrlPlaneResourceId)
               )
                 return true;
               return false;
@@ -304,10 +335,36 @@ export const useConnectionStore = create<ConnectionState>()(
         console.log(`Configured ${connections.length} KtrlPlane connections`);
       },
 
+      setEnvironmentConnections: (environments) => {
+        set((state) => {
+          // Keep the current selection when it still resolves after the refresh.
+          // If the selected environment disappeared, fall back to no selection so
+          // the UI can auto-select instead of pointing at a stale connection.
+          const selectionStillValid =
+            state.currentConnectionId === null ||
+            environments.some((c) => c.id === state.currentConnectionId) ||
+            state.ktrlPlaneConnections.some(
+              (c) => c.id === state.currentConnectionId
+            ) ||
+            state.connections.some((c) => c.id === state.currentConnectionId);
+
+          return {
+            environmentConnections: environments,
+            currentConnectionId: selectionStillValid
+              ? state.currentConnectionId
+              : environments[0]?.id ?? null,
+          };
+        });
+      },
+
       getAllConnections: () => {
         const state = get();
-        // KtrlPlane connections first, then local connections
-        return [...state.ktrlPlaneConnections, ...state.connections];
+        // Managed connections first, then local connections
+        return [
+          ...state.ktrlPlaneConnections,
+          ...state.environmentConnections,
+          ...state.connections,
+        ];
       },
     }),
     {
@@ -335,6 +392,10 @@ export const useConnectionStore = create<ConnectionState>()(
  */
 export function validateConnectionAuth(connection: Connection): string | null {
   const { authProvider, authConfig } = connection;
+
+  if (!connection.adtHost && !connection.environmentId) {
+    return "A connection requires either a Host or an Environment ID";
+  }
 
   if (authProvider === "none") {
     return null; // No auth required

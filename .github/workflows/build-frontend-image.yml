@@ -17,11 +17,43 @@ env:
   FRONTEND_IMAGE_NAME: ${{ github.repository }}-frontend
 
 jobs:
+  # One job per deployment flavour. Each flavour reads its build args from a
+  # GitHub Environment of the same name, so a single workflow produces several
+  # differently-configured images from the same commit.
+  #
+  # - konnektr: the public build. Tags are unsuffixed (latest, v1.2.3, main, ...)
+  #   so existing consumers are unaffected.
+  # - arcadis-dev / arcadis-prd: proxy-resolved builds for the Arcadis Digital
+  #   Twins AKS cluster. Tags carry a `-arcadis-dev` / `-arcadis-prd` suffix.
+  #
+  # All values are public (proxy paths, B2C client ids/authorities/scopes) and
+  # live as GitHub *variables*, not secrets.
+  #
+  # GTM_ID is an organisation-level secret and would otherwise be visible to
+  # every job, so analytics is gated on an explicit per-flavour matrix flag.
+  # The Arcadis builds therefore ship with an empty VITE_GTM_ID: the GTM plugin
+  # is omitted at build time and the cookie consent banner is suppressed.
   build-frontend:
+    name: Build ${{ matrix.flavour }}
     runs-on: ubuntu-latest
+    environment: ${{ matrix.flavour }}
     permissions:
       contents: read
       packages: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - flavour: konnektr
+            tag_suffix: ""
+            analytics: true
+          - flavour: arcadis-dev
+            tag_suffix: "-arcadis-dev"
+            analytics: false
+          - flavour: arcadis-prd
+            tag_suffix: "-arcadis-prd"
+            analytics: false
 
     steps:
       - name: Checkout repository
@@ -39,6 +71,9 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}
+          flavor: |
+            latest=false
+            suffix=${{ matrix.tag_suffix }},onlatest=true
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -60,9 +95,16 @@ jobs:
             VITE_AUTH0_CLIENT_ID=${{ vars.AUTH0_CLIENT_ID }}
             VITE_AUTH0_KTRLPLANE_AUDIENCE=${{ vars.AUTH0_KTRLPLANE_AUDIENCE }}
             VITE_AUTH0_GRAPH_AUDIENCE=${{ vars.AUTH0_GRAPH_AUDIENCE }}
-            VITE_GTM_ID=${{ secrets.GTM_ID }}
-          push: true
+            VITE_GTM_ID=${{ matrix.analytics && secrets.GTM_ID || '' }}
+            VITE_TWINS_PROXY=${{ vars.TWINS_PROXY }}
+            VITE_ENVIRONMENTS_ENDPOINT=${{ vars.ENVIRONMENTS_ENDPOINT }}
+            VITE_ENVIRONMENTS_LABEL=${{ vars.ENVIRONMENTS_LABEL }}
+            VITE_B2C_CLIENT_ID=${{ vars.B2C_CLIENT_ID }}
+            VITE_B2C_AUTHORITY=${{ vars.B2C_AUTHORITY }}
+            VITE_B2C_KNOWN_AUTHORITY=${{ vars.B2C_KNOWN_AUTHORITY }}
+            VITE_B2C_SCOPE=${{ vars.B2C_SCOPE }}
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=frontend-${{ matrix.flavour }}
+          cache-to: type=gha,mode=max,scope=frontend-${{ matrix.flavour }}
