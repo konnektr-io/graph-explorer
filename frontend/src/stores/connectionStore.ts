@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { KtrlPlaneResource } from "@/services/ktrlplaneClient";
+import type { EnvironmentType } from "@/services/environmentsClient";
 import { isLocalhost } from "@/utils/isLocalHost";
 
 /**
@@ -78,6 +79,13 @@ export interface Connection {
 
   // Resource status (optional, only for managed connections)
   status?: string;
+
+  /**
+   * Backend kind of an environment-managed connection, derived from the
+   * environment's `adtHost` (ADT vs self-hosted Konnektr Graph).
+   * Display-only — NEVER used for routing (routing stays on `environmentId`).
+   */
+  environmentType?: EnvironmentType;
 
   // Internal fields for matching (prefixed with _ to indicate they're not user-facing)
   _internalEndpoint?: string; // Kubernetes internal service address

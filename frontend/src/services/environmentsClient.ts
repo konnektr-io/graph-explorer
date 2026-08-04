@@ -24,7 +24,55 @@ export interface Environment {
   name: string;
   description?: string;
   status?: string;
+  /**
+   * Backend host of the graph instance the environment points at (when the
+   * deployment exposes it). Display-only: used to classify the environment as
+   * an Azure Digital Twins instance or a self-hosted Konnektr Graph.
+   */
+  adtHost?: string;
 }
+
+/**
+ * Backend kind of an environment, derived from its `adtHost`.
+ *
+ * - `adt` — Azure Digital Twins (host ends with `digitaltwins.azure.net`)
+ * - `konnektr-graph` — self-hosted Konnektr Graph (`arcadis.com`, `cluster.local`)
+ * - `unknown` — host absent or unrecognised
+ */
+export type EnvironmentType = "adt" | "konnektr-graph" | "unknown";
+
+const ADT_HOST_SUFFIX = "digitaltwins.azure.net";
+const SELF_HOSTED_SUFFIXES = ["arcadis.com", "cluster.local"] as const;
+
+/**
+ * Classify an environment's backend kind from its `adtHost`.
+ *
+ * The host is matched by suffix (case-insensitive, protocol-stripped), which is
+ * the contract Arcadis deployments rely on: Azure Digital Twins instances end
+ * with `digitaltwins.azure.net`, self-hosted Konnektr Graph instances end with
+ * `arcadis.com` or `cluster.local`.
+ */
+export function classifyEnvironmentHost(adtHost?: string): EnvironmentType {
+  if (!adtHost) return "unknown";
+
+  const host = adtHost
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/\/+$/, "");
+
+  if (host.endsWith(ADT_HOST_SUFFIX)) return "adt";
+  if (SELF_HOSTED_SUFFIXES.some((suffix) => host.endsWith(suffix))) {
+    return "konnektr-graph";
+  }
+  return "unknown";
+}
+
+/** Display labels for {@link EnvironmentType}. */
+export const ENVIRONMENT_TYPE_LABELS: Record<EnvironmentType, string> = {
+  adt: "ADT",
+  "konnektr-graph": "Konnektr Graph",
+  unknown: "Unknown",
+};
 
 /** Raw, unnormalised environment record as returned by the API. */
 export type RawEnvironment = Record<string, unknown>;
@@ -39,6 +87,9 @@ const ID_KEYS = ["$dtId", "id", "environmentId", "resource_id"] as const;
 
 /** Candidate keys for the environment display name, in priority order. */
 const NAME_KEYS = ["name", "displayName", "title"] as const;
+
+/** Candidate keys for the environment backend host, in priority order. */
+const ADT_HOST_KEYS = ["adtHost", "host", "hostName"] as const;
 
 function readString(
   record: RawEnvironment,
@@ -94,12 +145,14 @@ export function normalizeEnvironment(
   const name = readFirstString(record, NAME_KEYS, nameField) ?? id;
   const description = readString(record, "description");
   const status = readString(record, "status");
+  const adtHost = readFirstString(record, ADT_HOST_KEYS);
 
   return {
     id,
     name,
     ...(description ? { description } : {}),
     ...(status ? { status } : {}),
+    ...(adtHost ? { adtHost } : {}),
   };
 }
 

@@ -5,6 +5,8 @@ import {
   parseEnvironmentsResponse,
   getEnvironmentsEndpoint,
   fetchEnvironments,
+  classifyEnvironmentHost,
+  ENVIRONMENT_TYPE_LABELS,
 } from "@/services/environmentsClient";
 
 afterEach(() => {
@@ -96,6 +98,41 @@ describe("environmentsClient", () => {
       });
     });
 
+    it("carries adtHost when present (Arcadis shape)", () => {
+      expect(
+        normalizeEnvironment({
+          $dtId: "env-adt-01",
+          name: "ADT Prod",
+          adtHost: "my-adt.digitaltwins.azure.net",
+        })
+      ).toEqual({
+        id: "env-adt-01",
+        name: "ADT Prod",
+        adtHost: "my-adt.digitaltwins.azure.net",
+      });
+    });
+
+    it("accepts host / hostName as alternative adtHost keys", () => {
+      expect(normalizeEnvironment({ id: "h1", name: "H", host: "x.arcadis.com" })).toEqual({
+        id: "h1",
+        name: "H",
+        adtHost: "x.arcadis.com",
+      });
+      expect(
+        normalizeEnvironment({ id: "h2", name: "H", hostName: "y.cluster.local" })
+      ).toEqual({
+        id: "h2",
+        name: "H",
+        adtHost: "y.cluster.local",
+      });
+    });
+
+    it("omits adtHost entirely when the payload has none", () => {
+      const result = normalizeEnvironment({ $dtId: "e1", name: "One" });
+      expect(result).not.toBeNull();
+      expect(result).not.toHaveProperty("adtHost");
+    });
+
     it("omits status entirely when the payload has no status field", () => {
       const result = normalizeEnvironment({ $dtId: "e1", name: "One" });
       expect(result).not.toBeNull();
@@ -124,6 +161,51 @@ describe("environmentsClient", () => {
         id: "42",
         name: "Forty-two",
       });
+    });
+  });
+
+  describe("classifyEnvironmentHost", () => {
+    it("classifies Azure Digital Twins hosts by .digitaltwins.azure.net suffix", () => {
+      expect(classifyEnvironmentHost("my-adt.digitaltwins.azure.net")).toBe(
+        "adt"
+      );
+      expect(classifyEnvironmentHost("dev.digitaltwins.azure.net")).toBe("adt");
+    });
+
+    it("classifies self-hosted Konnektr Graph hosts by .arcadis.com suffix", () => {
+      expect(classifyEnvironmentHost("graph.arcadis.com")).toBe(
+        "konnektr-graph"
+      );
+      expect(classifyEnvironmentHost("twins.arcadis.com")).toBe(
+        "konnektr-graph"
+      );
+    });
+
+    it("classifies self-hosted Konnektr Graph hosts by .cluster.local suffix", () => {
+      expect(classifyEnvironmentHost("env-1.svc.cluster.local")).toBe(
+        "konnektr-graph"
+      );
+    });
+
+    it("strips protocol and is case-insensitive", () => {
+      expect(classifyEnvironmentHost("HTTPS://MY-ADT.DIGITALTWINS.AZURE.NET")).toBe(
+        "adt"
+      );
+      expect(classifyEnvironmentHost("https://graph.arcadis.com/")).toBe(
+        "konnektr-graph"
+      );
+    });
+
+    it("returns unknown for unrecognised or missing hosts", () => {
+      expect(classifyEnvironmentHost("something.else.com")).toBe("unknown");
+      expect(classifyEnvironmentHost(undefined)).toBe("unknown");
+      expect(classifyEnvironmentHost("")).toBe("unknown");
+    });
+
+    it("exposes a display label for every type", () => {
+      expect(ENVIRONMENT_TYPE_LABELS.adt).toBe("ADT");
+      expect(ENVIRONMENT_TYPE_LABELS["konnektr-graph"]).toBe("Konnektr Graph");
+      expect(ENVIRONMENT_TYPE_LABELS.unknown).toBe("Unknown");
     });
   });
 
