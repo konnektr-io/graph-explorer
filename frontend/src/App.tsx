@@ -8,7 +8,7 @@ import { MainContent } from "@/components/layout/MainContent";
 import { Inspector } from "@/components/inspector/Inspector";
 import { OnboardingDialog } from "@/components/OnboardingDialog";
 import { AuthProvider } from "@/services/auth/AuthProvider";
-import { isArcadisFlavor } from "@/config/flavor";
+import { isArcadisFlavor, isCustomConnectionsDisabled } from "@/config/flavor";
 import { KtrlPlaneConnectionManager } from "@/components/KtrlPlaneConnectionManager";
 import { EnvironmentConnectionManager } from "@/components/EnvironmentConnectionManager";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
@@ -124,6 +124,10 @@ function App() {
     // 2. User has NO connection at all (new users)
     // 3. User hasn't dismissed onboarding
     if (typeof window === "undefined") return;
+
+    // Arcadis deployments auto-load environments, so the welcome dialog (which
+    // offers demo/deploy/custom connection options) is never needed on load.
+    if (isCustomConnectionsDisabled()) return;
 
     const allConnections = getAllConnections();
     const hasAnyConnection = allConnections.length > 0;

@@ -28,7 +28,11 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/services/auth/authContext";
-import { isArcadisFlavor, isAuth0Disabled } from "@/config/flavor";
+import {
+  isArcadisFlavor,
+  isAuth0Disabled,
+  isCustomConnectionsDisabled,
+} from "@/config/flavor";
 import { useConnectionStore } from "@/stores/connectionStore";
 import { useModelsStore } from "@/stores/modelsStore";
 import { useDigitalTwinsStore } from "@/stores/digitalTwinsStore";
@@ -96,6 +100,7 @@ export function OnboardingDialog({
   // Arcadis flavor gates
   const auth0Disabled = isAuth0Disabled();
   const arcadisFlavor = isArcadisFlavor();
+  const customConnectionsDisabled = isCustomConnectionsDisabled();
 
   // Store hooks
   const currentConnection = useConnectionStore((state) => {
@@ -368,34 +373,38 @@ export function OnboardingDialog({
                     </Card>
                   )}
 
-                  {/* Custom Connection */}
-                  <Card
-                    className="cursor-pointer hover:border-primary transition-colors"
-                    onClick={handleConnectCustom}
-                  >
-                    <CardContent className="p-3">
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                        <Globe className="w-8 h-8 text-primary flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 mb-1">
-                            <CardTitle className="text-base">
-                              Connect Custom Instance
-                            </CardTitle>
-                            <Badge variant="secondary" className="text-xs">
-                              Advanced
-                            </Badge>
+                  {/* Custom Connection — hidden when custom connections are
+                      disabled (Arcadis): environments are auto-loaded and the
+                      Add dialog it opens is hidden too */}
+                  {!customConnectionsDisabled && (
+                    <Card
+                      className="cursor-pointer hover:border-primary transition-colors"
+                      onClick={handleConnectCustom}
+                    >
+                      <CardContent className="p-3">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                          <Globe className="w-8 h-8 text-primary flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                              <CardTitle className="text-base">
+                                Connect Custom Instance
+                              </CardTitle>
+                              <Badge variant="secondary" className="text-xs">
+                                Advanced
+                              </Badge>
+                            </div>
+                            <CardDescription className="text-xs">
+                              Connect to your own Azure Digital Twins or self-hosted
+                              instance.
+                            </CardDescription>
                           </div>
-                          <CardDescription className="text-xs">
-                            Connect to your own Azure Digital Twins or self-hosted
-                            instance.
-                          </CardDescription>
+                          <Button size="sm" variant="outline" className="w-full sm:w-auto flex-shrink-0">
+                            Add Connection
+                          </Button>
                         </div>
-                        <Button size="sm" variant="outline" className="w-full sm:w-auto flex-shrink-0">
-                          Add Connection
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
               </div>
 
