@@ -282,7 +282,10 @@ export const MonacoEditor = forwardRef<MonacoEditorRef, MonacoEditorProps>(
 
       // Provide completion items for Cypher
       monaco.languages.registerCompletionItemProvider("cypher", {
-        provideCompletionItems: (model, position) => {
+        provideCompletionItems: (
+          model: monaco.editor.ITextModel,
+          position: monaco.Position
+        ) => {
           const word = model.getWordUntilPosition(position);
           const range = {
             startLineNumber: position.lineNumber,
