@@ -103,6 +103,8 @@ jobs:
             VITE_B2C_AUTHORITY=${{ vars.B2C_AUTHORITY }}
             VITE_B2C_KNOWN_AUTHORITY=${{ vars.B2C_KNOWN_AUTHORITY }}
             VITE_B2C_SCOPE=${{ vars.B2C_SCOPE }}
+            VITE_AUTH0_DISABLED=${{ vars.AUTH0_DISABLED }}
+            VITE_CUSTOM_CONNECTIONS_DISABLED=${{ vars.CUSTOM_CONNECTIONS_DISABLED }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

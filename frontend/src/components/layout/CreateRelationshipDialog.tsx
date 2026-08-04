@@ -24,7 +24,7 @@ import {
   getRelationshipDisplayName,
   getModelDisplayName,
 } from "@/utils/dtdlHelpers";
-import { useAuth0 } from "@auth0/auth0-react";
+import { useAuth } from "@/services/auth/authContext";
 import { Search, ArrowRight, AlertCircle, Loader2 } from "lucide-react";
 import type { BasicDigitalTwin } from "@/types";
 
@@ -54,7 +54,7 @@ export function CreateRelationshipDialog({
 
   const { createRelationship, queryTwins } = useDigitalTwinsStore();
   const { selectItem } = useInspectorStore();
-  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth0();
+  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth();
 
   const authCallbacks = useMemo(
     () => ({

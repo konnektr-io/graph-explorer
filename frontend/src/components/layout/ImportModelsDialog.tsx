@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useModelsStore } from "@/stores/modelsStore";
-import { useAuth0 } from "@auth0/auth0-react";
+import { useAuth } from "@/services/auth/authContext";
 import { cn } from "@/lib/utils";
 
 type ImportMode = "paste" | "upload";
@@ -38,7 +38,7 @@ export function ImportModelsDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { uploadModel, uploadModels } = useModelsStore();
-  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth0();
+  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth();
 
   // Reset state when dialog opens
   useEffect(() => {

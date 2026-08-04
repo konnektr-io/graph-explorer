@@ -9,6 +9,7 @@
 
 export {
   MsalTokenCredential,
+  B2CTokenCredential,
   Auth0TokenCredential,
   KtrlPlaneGraphTokenCredential,
   useAuth0Credential,

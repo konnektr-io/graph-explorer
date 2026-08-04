@@ -27,7 +27,8 @@ import {
   Globe,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useAuth0 } from "@auth0/auth0-react";
+import { useAuth } from "@/services/auth/authContext";
+import { isArcadisFlavor, isAuth0Disabled } from "@/config/flavor";
 import { useConnectionStore } from "@/stores/connectionStore";
 import { useModelsStore } from "@/stores/modelsStore";
 import { useDigitalTwinsStore } from "@/stores/digitalTwinsStore";
@@ -89,8 +90,12 @@ export function OnboardingDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
 
-  // Auth0 hooks for authentication
-  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth0();
+  // Auth hooks for authentication
+  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth();
+
+  // Arcadis flavor gates
+  const auth0Disabled = isAuth0Disabled();
+  const arcadisFlavor = isArcadisFlavor();
 
   // Store hooks
   const currentConnection = useConnectionStore((state) => {
@@ -302,62 +307,66 @@ export function OnboardingDialog({
                 <h3 className="text-lg font-semibold">Quick Start Options</h3>
                 <div className="space-y-2">
                   {/* Demo Environment */}
-                  <Card
-                    className="cursor-pointer hover:border-primary transition-colors"
-                    onClick={handleLoadDemo}
-                  >
-                    <CardContent className="p-3">
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                        <Zap className="w-8 h-8 text-primary flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 mb-1">
-                            <CardTitle className="text-base">
-                              Try Demo Environment
-                            </CardTitle>
-                            <Badge variant="secondary" className="text-xs">
-                              No Setup Required
-                            </Badge>
+                  {!arcadisFlavor && (
+                    <Card
+                      className="cursor-pointer hover:border-primary transition-colors"
+                      onClick={handleLoadDemo}
+                    >
+                      <CardContent className="p-3">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                          <Zap className="w-8 h-8 text-primary flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                              <CardTitle className="text-base">
+                                Try Demo Environment
+                              </CardTitle>
+                              <Badge variant="secondary" className="text-xs">
+                                No Setup Required
+                              </Badge>
+                            </div>
+                            <CardDescription className="text-xs">
+                              Instant access to pre-loaded sample data. Perfect
+                              for exploring features.
+                            </CardDescription>
                           </div>
-                          <CardDescription className="text-xs">
-                            Instant access to pre-loaded sample data. Perfect for
-                            exploring features.
-                          </CardDescription>
+                          <Button size="sm" className="w-full sm:w-auto flex-shrink-0">
+                            Connect to Demo
+                          </Button>
                         </div>
-                        <Button size="sm" className="w-full sm:w-auto flex-shrink-0">
-                          Connect to Demo
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  )}
 
                   {/* Deploy New */}
-                  <Card
-                    className="cursor-pointer hover:border-primary transition-colors"
-                    onClick={handleDeployNew}
-                  >
-                    <CardContent className="p-3">
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                        <Cloud className="w-8 h-8 text-primary flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 mb-1">
-                            <CardTitle className="text-base">
-                              Deploy on KtrlPlane
-                            </CardTitle>
-                            <Badge variant="secondary" className="text-xs">
-                              Production Ready
-                            </Badge>
+                  {!auth0Disabled && (
+                    <Card
+                      className="cursor-pointer hover:border-primary transition-colors"
+                      onClick={handleDeployNew}
+                    >
+                      <CardContent className="p-3">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                          <Cloud className="w-8 h-8 text-primary flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                              <CardTitle className="text-base">
+                                Deploy on KtrlPlane
+                              </CardTitle>
+                              <Badge variant="secondary" className="text-xs">
+                                Production Ready
+                              </Badge>
+                            </div>
+                            <CardDescription className="text-xs">
+                              Fully managed instance with automatic scaling and
+                              backups.
+                            </CardDescription>
                           </div>
-                          <CardDescription className="text-xs">
-                            Fully managed instance with automatic scaling and
-                            backups.
-                          </CardDescription>
+                          <Button size="sm" variant="outline" className="w-full sm:w-auto flex-shrink-0">
+                            Deploy New Instance
+                          </Button>
                         </div>
-                        <Button size="sm" variant="outline" className="w-full sm:w-auto flex-shrink-0">
-                          Deploy New Instance
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  )}
 
                   {/* Custom Connection */}
                   <Card
@@ -591,14 +600,18 @@ export function OnboardingDialog({
                     <Upload className="w-4 h-4 mr-2" />
                     Import Your Own Models
                   </Button>
-                  <Button variant="outline" onClick={handleLoadDemo}>
-                    <Zap className="w-4 h-4 mr-2" />
-                    Try Demo Environment
-                  </Button>
-                  <Button variant="outline" onClick={handleDeployNew}>
-                    <Cloud className="w-4 h-4 mr-2" />
-                    Deploy on KtrlPlane
-                  </Button>
+                  {!arcadisFlavor && (
+                    <Button variant="outline" onClick={handleLoadDemo}>
+                      <Zap className="w-4 h-4 mr-2" />
+                      Try Demo Environment
+                    </Button>
+                  )}
+                  {!auth0Disabled && (
+                    <Button variant="outline" onClick={handleDeployNew}>
+                      <Cloud className="w-4 h-4 mr-2" />
+                      Deploy on KtrlPlane
+                    </Button>
+                  )}
                   <Button variant="ghost" onClick={handleSkip}>
                     <X className="w-4 h-4 mr-2" />
                     Skip Onboarding

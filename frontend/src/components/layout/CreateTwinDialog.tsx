@@ -13,7 +13,7 @@ import {
 import { useDigitalTwinsStore } from "@/stores/digitalTwinsStore";
 import { useInspectorStore } from "@/stores/inspectorStore";
 import { getModelDisplayName } from "@/utils/dtdlHelpers";
-import { useAuth0 } from "@auth0/auth0-react";
+import { useAuth } from "@/services/auth/authContext";
 
 // Checking ModelSidebar imports, I don't see toast. I'll stick to store actions and local state.
 
@@ -34,7 +34,7 @@ export function CreateTwinDialog({
 
   const { createTwin } = useDigitalTwinsStore();
   const { selectItem } = useInspectorStore();
-  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth0();
+  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth();
 
   const handleCreate = async () => {
     setIsCreating(true);

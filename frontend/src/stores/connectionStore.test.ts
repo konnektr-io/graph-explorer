@@ -204,4 +204,38 @@ describe("validateConnectionAuth", () => {
   it("accepts a host-routed connection with no environmentId", () => {
     expect(validateConnectionAuth(localConnection("l", "host"))).toBeNull();
   });
+
+  it("accepts an environment-managed connection without an authConfig", () => {
+    expect(
+      validateConnectionAuth({
+        id: "env-e1",
+        name: "Prod",
+        environmentId: "e1",
+        authProvider: "msal",
+        managedSource: "environments",
+      })
+    ).toBeNull();
+  });
+
+  it("accepts an environment-routed msal connection with no authConfig", () => {
+    expect(
+      validateConnectionAuth({
+        id: "env-e2",
+        name: "Dev",
+        environmentId: "e2",
+        authProvider: "msal",
+      })
+    ).toBeNull();
+  });
+
+  it("still rejects a custom msal connection with no authConfig", () => {
+    expect(
+      validateConnectionAuth({
+        id: "custom",
+        name: "Custom",
+        adtHost: "custom.example.com",
+        authProvider: "msal",
+      })
+    ).toBe("Authentication configuration required for msal");
+  });
 });
