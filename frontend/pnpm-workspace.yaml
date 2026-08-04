@@ -3,8 +3,37 @@ allowBuilds:
   '@tailwindcss/oxide': true
   browser-tabs-lock: true
   esbuild: true
+minimumReleaseAgeExclude:
+  - dompurify@3.4.13
 onlyBuiltDependencies:
   - '@swc/core'
   - '@tailwindcss/oxide'
   - browser-tabs-lock
   - esbuild
+
+# Security floors for transitive dependencies flagged by Dependabot (issue #8).
+# These packages are not direct dependencies; the versions below are the first
+# patched releases within the major line their parents already depend on, so no
+# breaking change is forced on the dependency tree.
+#
+# Remove an entry once every parent resolves to a patched version on its own.
+overrides:
+  # monaco-editor pins dompurify exactly (0.56.0 -> 3.4.8); 3.4.13 is the latest
+  # patched release in the 3.x line and closes the remaining XSS/mXSS advisories.
+  dompurify: '>=3.4.13'
+  # ReDoS / prototype-pollution floors. Both major lines are present in the tree.
+  brace-expansion@1: '>=1.1.18'
+  brace-expansion@2: '>=2.1.4'
+  minimatch@3: '>=3.1.4'
+  minimatch@9: '>=9.0.9'
+  picomatch@2: '>=2.3.2'
+  picomatch@4: '>=4.0.5'
+  js-yaml: '>=4.3.1'
+  lodash: '>=4.18.1'
+  ajv@6: '>=6.15.0'
+  flatted: '>=3.4.4'
+  follow-redirects: '>=1.16.0'
+  ws: '>=8.21.1'
+  postcss: '>=8.5.25'
+  rollup: '>=4.62.4'
+  tar: '>=7.5.22'
