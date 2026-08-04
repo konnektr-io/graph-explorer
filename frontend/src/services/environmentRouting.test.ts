@@ -5,11 +5,34 @@ import {
   getB2CScope,
   isEnvironmentRoutingConfigured,
   environmentToConnection,
+  getMsalInstance,
+  getInitializedMsalInstance,
+  resetMsalInstance,
 } from "@/services/environmentRouting";
 import type { Environment } from "@/services/environmentsClient";
 
+// MSAL v3: PublicClientApplication must be initialized (awaited) before any
+// other API call. The real @azure/msal-browser throws
+// uninitialized_public_client_application otherwise — this is exactly the
+// crash v0.1.2 shipped with. Mock the module to verify OUR code never calls
+// getAllAccounts before initialize() resolves.
+const initializeMock = vi.fn();
+const getAllAccountsMock = vi.fn();
+vi.mock("@azure/msal-browser", () => ({
+  PublicClientApplication: class {
+    initialize = initializeMock;
+    getAllAccounts = getAllAccountsMock;
+    loginPopup = vi.fn();
+    acquireTokenSilent = vi.fn();
+    acquireTokenPopup = vi.fn();
+    logoutPopup = vi.fn();
+  },
+}));
+
 afterEach(() => {
   vi.unstubAllEnvs();
+  vi.clearAllMocks();
+  resetMsalInstance();
 });
 
 describe("environmentRouting — configuration gating", () => {
@@ -71,6 +94,54 @@ describe("environmentRouting — configuration gating", () => {
 
   it("defaults the group label to a deployment-neutral value", () => {
     expect(ENVIRONMENTS_LABEL).toBe("Environments");
+  });
+});
+
+describe("environmentRouting — MSAL initialize-before-use contract (v0.1.2 regression)", () => {
+  it("starts initialize() as soon as the singleton is created", () => {
+    vi.stubEnv("VITE_B2C_CLIENT_ID", "client-id");
+    vi.stubEnv("VITE_B2C_AUTHORITY", "https://tenant.b2clogin.com/x/y");
+
+    const instance = getMsalInstance();
+
+    expect(instance).not.toBeNull();
+    expect(initializeMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("getInitializedMsalInstance awaits initialize() before returning", async () => {
+    vi.stubEnv("VITE_B2C_CLIENT_ID", "client-id");
+    vi.stubEnv("VITE_B2C_AUTHORITY", "https://tenant.b2clogin.com/x/y");
+
+    let resolveInit: () => void = () => {};
+    initializeMock.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        resolveInit = resolve;
+      })
+    );
+
+    // getAllAccounts would throw uninitialized_public_client_application if
+    // called before initialize resolves. Track its order relative to init.
+    getAllAccountsMock.mockReturnValue([{ username: "a@b.c" }]);
+    let accountsReadBeforeInit = false;
+    getAllAccountsMock.mockImplementation(() => {
+      accountsReadBeforeInit = true;
+      return [{ username: "a@b.c" }];
+    });
+
+    const pending = getInitializedMsalInstance();
+    // Before resolve: no MSAL API may have been touched.
+    await Promise.resolve();
+    expect(getAllAccountsMock).not.toHaveBeenCalled();
+
+    resolveInit();
+    const instance = await pending;
+    expect(instance).not.toBeNull();
+    expect(accountsReadBeforeInit).toBe(false);
+  });
+
+  it("returns null when B2C is not configured", async () => {
+    expect(await getInitializedMsalInstance()).toBeNull();
+    expect(initializeMock).not.toHaveBeenCalled();
   });
 });
 

@@ -70,8 +70,14 @@ export function isEnvironmentRoutingConfigured(): boolean {
 /**
  * Singleton MSAL instance for B2C authentication.
  * Created lazily and reused across the component lifecycle.
+ *
+ * MSAL v3 requires `await initialize()` to complete before ANY other MSAL
+ * API call (getAllAccounts, acquireToken*, loginPopup, ...). The init promise
+ * is started the moment the instance is created and memoized, so no caller can
+ * touch an uninitialized client.
  */
 let msalInstance: PublicClientApplication | null = null;
+let msalInitPromise: Promise<void> | null = null;
 
 export function getMsalInstance(): PublicClientApplication | null {
   if (msalInstance) return msalInstance;
@@ -80,12 +86,25 @@ export function getMsalInstance(): PublicClientApplication | null {
   if (!config) return null;
 
   msalInstance = new PublicClientApplication(config);
+  msalInitPromise = msalInstance.initialize();
   return msalInstance;
+}
+
+/**
+ * Resolves once the shared MSAL instance is fully initialized, or `null`
+ * when B2C is not configured. Always await this before touching MSAL.
+ */
+export async function getInitializedMsalInstance(): Promise<PublicClientApplication | null> {
+  const instance = getMsalInstance();
+  if (!instance) return null;
+  await msalInitPromise;
+  return instance;
 }
 
 /** Test seam — resets the lazily created MSAL singleton. */
 export function resetMsalInstance(): void {
   msalInstance = null;
+  msalInitPromise = null;
 }
 
 /**
@@ -97,10 +116,8 @@ export async function acquireB2CToken(
 ): Promise<string | null> {
   if (scopes.length === 0) return null;
 
-  const instance = getMsalInstance();
+  const instance = await getInitializedMsalInstance();
   if (!instance) return null;
-
-  await instance.initialize();
 
   const accounts = instance.getAllAccounts();
 
