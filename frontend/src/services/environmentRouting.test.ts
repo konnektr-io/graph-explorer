@@ -192,22 +192,30 @@ describe("environmentRouting — environmentToConnection", () => {
       name: "ADT",
       adtHost: "my-adt.digitaltwins.azure.net",
     });
-    expect(adt.environmentType).toBe("adt");
+    expect(adt.environmentType).toBe("azure");
     expect(adt.adtHost).toBeUndefined();
     expect(adt.environmentId).toBe("adt-1");
 
-    const selfHosted = environmentToConnection({
-      id: "self-1",
-      name: "Self-hosted",
+    const arcadis = environmentToConnection({
+      id: "arc-1",
+      name: "Arcadis",
       adtHost: "graph.arcadis.com",
     });
-    expect(selfHosted.environmentType).toBe("konnektr-graph");
-    expect(selfHosted.adtHost).toBeUndefined();
+    expect(arcadis.environmentType).toBe("arcadis");
+    expect(arcadis.adtHost).toBeUndefined();
+
+    const konnektr = environmentToConnection({
+      id: "self-1",
+      name: "Self-hosted",
+      adtHost: "env-1.svc.cluster.local",
+    });
+    expect(konnektr.environmentType).toBe("konnektr");
+    expect(konnektr.adtHost).toBeUndefined();
   });
 
-  it("keeps environmentType unknown when the environment has no adtHost", () => {
-    expect(environmentToConnection({ id: "x", name: "X" }).environmentType).toBe(
-      "unknown"
-    );
+  it("falls back to custom when the environment has no adtHost", () => {
+    expect(
+      environmentToConnection({ id: "x", name: "X" }).environmentType
+    ).toBe("custom");
   });
 });

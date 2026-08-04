@@ -167,45 +167,44 @@ describe("environmentsClient", () => {
   describe("classifyEnvironmentHost", () => {
     it("classifies Azure Digital Twins hosts by .digitaltwins.azure.net suffix", () => {
       expect(classifyEnvironmentHost("my-adt.digitaltwins.azure.net")).toBe(
-        "adt"
+        "azure"
       );
-      expect(classifyEnvironmentHost("dev.digitaltwins.azure.net")).toBe("adt");
-    });
-
-    it("classifies self-hosted Konnektr Graph hosts by .arcadis.com suffix", () => {
-      expect(classifyEnvironmentHost("graph.arcadis.com")).toBe(
-        "konnektr-graph"
-      );
-      expect(classifyEnvironmentHost("twins.arcadis.com")).toBe(
-        "konnektr-graph"
+      expect(classifyEnvironmentHost("dev.digitaltwins.azure.net")).toBe(
+        "azure"
       );
     });
 
-    it("classifies self-hosted Konnektr Graph hosts by .cluster.local suffix", () => {
+    it("classifies Arcadis-managed Konnektr Graph hosts by .arcadis.com suffix", () => {
+      expect(classifyEnvironmentHost("graph.arcadis.com")).toBe("arcadis");
+      expect(classifyEnvironmentHost("twins.arcadis.com")).toBe("arcadis");
+    });
+
+    it("classifies other self-hosted Konnektr Graph hosts by .cluster.local suffix", () => {
       expect(classifyEnvironmentHost("env-1.svc.cluster.local")).toBe(
-        "konnektr-graph"
+        "konnektr"
       );
     });
 
     it("strips protocol and is case-insensitive", () => {
-      expect(classifyEnvironmentHost("HTTPS://MY-ADT.DIGITALTWINS.AZURE.NET")).toBe(
-        "adt"
-      );
+      expect(
+        classifyEnvironmentHost("HTTPS://MY-ADT.DIGITALTWINS.AZURE.NET")
+      ).toBe("azure");
       expect(classifyEnvironmentHost("https://graph.arcadis.com/")).toBe(
-        "konnektr-graph"
+        "arcadis"
       );
     });
 
-    it("returns unknown for unrecognised or missing hosts", () => {
-      expect(classifyEnvironmentHost("something.else.com")).toBe("unknown");
-      expect(classifyEnvironmentHost(undefined)).toBe("unknown");
-      expect(classifyEnvironmentHost("")).toBe("unknown");
+    it("returns custom for unrecognised or missing hosts", () => {
+      expect(classifyEnvironmentHost("something.else.com")).toBe("custom");
+      expect(classifyEnvironmentHost(undefined)).toBe("custom");
+      expect(classifyEnvironmentHost("")).toBe("custom");
     });
 
     it("exposes a display label for every type", () => {
-      expect(ENVIRONMENT_TYPE_LABELS.adt).toBe("ADT");
-      expect(ENVIRONMENT_TYPE_LABELS["konnektr-graph"]).toBe("Konnektr Graph");
-      expect(ENVIRONMENT_TYPE_LABELS.unknown).toBe("Unknown");
+      expect(ENVIRONMENT_TYPE_LABELS.azure).toBe("Azure");
+      expect(ENVIRONMENT_TYPE_LABELS.arcadis).toBe("Arcadis");
+      expect(ENVIRONMENT_TYPE_LABELS.konnektr).toBe("Konnektr");
+      expect(ENVIRONMENT_TYPE_LABELS.custom).toBe("Custom");
     });
   });
 
