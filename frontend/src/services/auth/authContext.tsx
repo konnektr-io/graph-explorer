@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -9,7 +10,7 @@ import type { AccountInfo } from "@azure/msal-browser";
 import {
   acquireB2CToken,
   getB2CScope,
-  getMsalInstance,
+  getInitializedMsalInstance,
 } from "@/services/environmentRouting";
 
 /**
@@ -79,37 +80,58 @@ const accountToUser = (account: AccountInfo): AuthUser => {
  * shared MSAL singleton from `environmentRouting.ts`.
  */
 export function useB2CAuthValue(): AuthContextValue {
-  const [isAuthenticated, setIsAuthenticated] = useState(
-    () => (getMsalInstance()?.getAllAccounts() ?? []).length > 0
-  );
+  // MSAL v3: initialize() must be awaited before ANY other MSAL API call.
+  // The account is therefore read asynchronously (after init) instead of
+  // synchronously during render, which would throw the
+  // uninitialized_public_client_application error on startup.
+  const [account, setAccount] = useState<AccountInfo | undefined>(undefined);
+
+  useEffect(() => {
+    let cancelled = false;
+    getInitializedMsalInstance().then((instance) => {
+      if (cancelled || !instance) return;
+      setAccount(instance.getAllAccounts()[0]);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const isAuthenticated = Boolean(account);
 
   const login = useCallback(async () => {
     const scope = getB2CScope();
     await acquireB2CToken(scope ? [scope] : []);
-    setIsAuthenticated(
-      Boolean((getMsalInstance()?.getAllAccounts() ?? []).length > 0)
-    );
+    const instance = await getInitializedMsalInstance();
+    setAccount(instance?.getAllAccounts()[0]);
   }, []);
 
   const logout = useCallback(() => {
-    const instance = getMsalInstance();
-    const account = instance?.getAllAccounts()[0];
-    if (instance && account) {
-      instance
-        .logoutPopup({ account })
-        .catch((error) => console.error("B2C logout failed:", error));
-    }
-    setIsAuthenticated(false);
+    void (async () => {
+      const instance = await getInitializedMsalInstance();
+      if (!instance) return;
+      const currentAccount = instance.getAllAccounts()[0];
+      if (currentAccount) {
+        try {
+          await instance.logoutPopup({ account: currentAccount });
+        } catch (error) {
+          console.error("B2C logout failed:", error);
+        }
+      }
+      setAccount(undefined);
+    })();
   }, []);
 
   const getAccessTokenSilently = useCallback(async () => {
-    const instance = getMsalInstance();
-    const accounts = instance?.getAllAccounts() ?? [];
+    const instance = await getInitializedMsalInstance();
     const scope = getB2CScope();
-    if (!instance || !scope || accounts.length === 0) {
+    if (!instance || !scope) {
       throw new Error("Authentication required. Please sign in.");
     }
-    await instance.initialize();
+    const accounts = instance.getAllAccounts();
+    if (accounts.length === 0) {
+      throw new Error("Authentication required. Please sign in.");
+    }
     const result = await instance.acquireTokenSilent({
       scopes: [scope],
       account: accounts[0],
@@ -123,11 +145,10 @@ export function useB2CAuthValue(): AuthContextValue {
     return token ?? undefined;
   }, []);
 
-  const user = useMemo(() => {
-    if (!isAuthenticated) return undefined;
-    const account = getMsalInstance()?.getAllAccounts()[0];
-    return account ? accountToUser(account) : undefined;
-  }, [isAuthenticated]);
+  const user = useMemo(
+    () => (account ? accountToUser(account) : undefined),
+    [account]
+  );
 
   const value = useMemo<AuthContextValue>(
     () => ({
