@@ -13,7 +13,7 @@ import { useWorkspaceStore } from "../../stores/workspaceStore";
 import { useConnectionStore } from "../../stores/connectionStore";
 import { ModeToggle } from "../mode-toggle";
 import { ConnectionSelector } from "@/components/ConnectionSelector";
-import { useAuth0 } from "@auth0/auth0-react";
+import { useAuth } from "@/services/auth/authContext";
 import konnektrLogo from "@/assets/konnektr.svg";
 
 export function GraphHeader() {
@@ -32,7 +32,7 @@ export function GraphHeader() {
     user,
     loginWithRedirect,
     logout,
-  } = useAuth0();
+  } = useAuth();
 
   // Auto-select connection based on x-adt-host query parameter
   useEffect(() => {

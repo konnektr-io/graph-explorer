@@ -25,7 +25,7 @@ import {
 import { useInspectorStore } from "@/stores/inspectorStore";
 import { useModelsStore } from "@/stores/modelsStore";
 import { useConnectionStore } from "@/stores/connectionStore";
-import { useAuth0 } from "@auth0/auth0-react";
+import { useAuth } from "@/services/auth/authContext";
 import { useDigitalTwinsStore } from "@/stores/digitalTwinsStore";
 import { useQueryStore } from "@/stores/queryStore";
 import { getModelDisplayName } from "@/utils/dtdlHelpers";
@@ -202,7 +202,7 @@ export function ModelSidebar() {
     error: twinsError,
   } = useDigitalTwinsStore();
 
-  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth0();
+  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth();
   const currentConnection = useConnectionStore((state) =>
     state.getCurrentConnection()
   );

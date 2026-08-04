@@ -1,4 +1,4 @@
-import { useAuth0 } from "@auth0/auth0-react";
+import { useAuth } from "@/services/auth/authContext";
 import type { Connection } from "@/stores/connectionStore";
 import { digitalTwinsClientFactory } from "@/services/digitalTwinsClientFactory";
 import type { DigitalTwinsClient } from "@azure/digital-twins-core";
@@ -8,7 +8,7 @@ import type { DigitalTwinsClient } from "@azure/digital-twins-core";
  * Use this instead of calling digitalTwinsClientFactory directly
  */
 export function useDigitalTwinsClient() {
-  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth0();
+  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth();
 
   const getClient = async (
     connection: Connection

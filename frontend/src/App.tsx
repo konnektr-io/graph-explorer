@@ -7,7 +7,8 @@ import { ModelSidebar } from "@/components/layout/ModelSidebar";
 import { MainContent } from "@/components/layout/MainContent";
 import { Inspector } from "@/components/inspector/Inspector";
 import { OnboardingDialog } from "@/components/OnboardingDialog";
-import { KtrlPlaneAuthProvider } from "@/components/KtrlPlaneAuthProvider";
+import { AuthProvider } from "@/services/auth/AuthProvider";
+import { isArcadisFlavor } from "@/config/flavor";
 import { KtrlPlaneConnectionManager } from "@/components/KtrlPlaneConnectionManager";
 import { EnvironmentConnectionManager } from "@/components/EnvironmentConnectionManager";
 import { useWorkspaceStore } from "@/stores/workspaceStore";
@@ -35,6 +36,8 @@ function App() {
   // Auto-add demo connection from query param if needed
   useEffect(() => {
     if (typeof window === "undefined") return;
+    // The demo host is not reachable from the Arcadis deployment.
+    if (isArcadisFlavor()) return;
     const params = new URLSearchParams(window.location.search);
     const adtHost = params.get("x-adt-host");
     if (adtHost) {
@@ -209,7 +212,7 @@ function App() {
   };
 
   return (
-    <KtrlPlaneAuthProvider>
+    <AuthProvider>
       <KtrlPlaneConnectionManager />
       <EnvironmentConnectionManager />
       <ThemeProvider
@@ -292,7 +295,7 @@ function App() {
           />
         </div>
       </ThemeProvider>
-    </KtrlPlaneAuthProvider>
+    </AuthProvider>
   );
 }
 

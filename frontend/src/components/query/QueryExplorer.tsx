@@ -6,7 +6,7 @@ import { QueryHistory } from "@/components/query/QueryHistory";
 import { Button } from "@/components/ui/button";
 import { Play, History } from "lucide-react";
 import { useQueryStore } from "@/stores/queryStore";
-import { useAuth0 } from "@auth0/auth0-react";
+import { useAuth } from "@/services/auth/authContext";
 
 export function QueryExplorer() {
   const {
@@ -20,7 +20,7 @@ export function QueryExplorer() {
     setShowHistory,
   } = useQueryStore();
 
-  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth0();
+  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth();
 
   const [verticalSizes, setVerticalSizes] = useState([60, 40]);
   const editorRef = useRef<any>(null);

@@ -39,9 +39,10 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Trash2, MoreVertical, RefreshCw, Pencil, Sprout } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useAuth0 } from "@auth0/auth0-react";
+import { useAuth } from "@/services/auth/authContext";
+import { isAuth0Disabled, isCustomConnectionsDisabled } from "@/config/flavor";
 import { fetchGraphResources } from "@/services/ktrlplaneClient";
-import { ENVIRONMENTS_LABEL } from "@/services/environmentRouting";
+import { ENVIRONMENTS_LABEL, getMsalConfig } from "@/services/environmentRouting";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -78,7 +79,10 @@ export function ConnectionSelector(): React.ReactElement {
   );
 
   const { isAuthenticated, getAccessTokenSilently, getAccessTokenWithPopup } =
-    useAuth0();
+    useAuth();
+
+  const auth0Disabled = isAuth0Disabled();
+  const customConnectionsDisabled = isCustomConnectionsDisabled();
 
   const [open, setOpen] = useState(false);
   const [showCustomForm, setShowCustomForm] = useState(false);
@@ -92,7 +96,7 @@ export function ConnectionSelector(): React.ReactElement {
     name: "",
     adtHost: "",
     description: "",
-    authProvider: "none" as AuthProvider,
+    authProvider: "none" as AuthProvider | "arcadis",
     // MSAL fields
     clientId: "",
     tenantId: "",
@@ -106,7 +110,7 @@ export function ConnectionSelector(): React.ReactElement {
   // Poll KtrlPlane resources every 30s while authenticated
   // (Initial fetch happens in KtrlPlaneConnectionManager)
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (auth0Disabled || !isAuthenticated) return;
     const interval = setInterval(() => {
       handleRefresh();
     }, 30000);
@@ -114,7 +118,7 @@ export function ConnectionSelector(): React.ReactElement {
   }, [isAuthenticated]);
 
   const handleRefresh = async () => {
-    if (!isAuthenticated) return;
+    if (auth0Disabled || !isAuthenticated) return;
 
     setIsRefreshing(true);
     try {
@@ -264,8 +268,18 @@ export function ConnectionSelector(): React.ReactElement {
     }
 
     // Build auth config based on provider
+    let authProvider: AuthProvider = form.authProvider as AuthProvider;
     let authConfig = undefined;
-    if (form.authProvider === "msal") {
+    if (form.authProvider === "arcadis") {
+      // Arcadis IAM (Azure B2C): use the deployment-wide B2C config.
+      authProvider = "msal";
+      const b2cConfig = getMsalConfig();
+      authConfig = {
+        clientId: b2cConfig?.auth.clientId,
+        tenantId: b2cConfig?.auth.authority,
+        isB2C: true,
+      };
+    } else if (form.authProvider === "msal") {
       authConfig = {
         clientId: form.clientId,
         tenantId: form.tenantId,
@@ -286,7 +300,7 @@ export function ConnectionSelector(): React.ReactElement {
       name: form.name,
       adtHost: form.adtHost,
       description: form.description,
-      authProvider: form.authProvider,
+      authProvider,
       authConfig,
     };
 
@@ -482,7 +496,7 @@ export function ConnectionSelector(): React.ReactElement {
               <Sprout className="mr-2 h-4 w-4" />
               Load Sample Data
             </DropdownMenuItem>
-            {isAuthenticated && (
+            {!auth0Disabled && isAuthenticated && (
               <DropdownMenuItem onClick={handleRefresh} disabled={isRefreshing}>
                 <RefreshCw
                   className={`mr-2 h-4 w-4 ${
@@ -516,6 +530,7 @@ export function ConnectionSelector(): React.ReactElement {
         open={showOnboardingDialog}
         onOpenChange={setShowOnboardingDialog}
       />
+      {!customConnectionsDisabled && (
       <Dialog open={open} onOpenChange={handleDialogOpenChange}>
         <DialogTrigger asChild>
           <Button variant="outline" size="sm" data-testid="add-connection-button">
@@ -634,7 +649,7 @@ export function ConnectionSelector(): React.ReactElement {
                     onValueChange={(value) =>
                       setForm((f) => ({
                         ...f,
-                        authProvider: value as AuthProvider,
+                        authProvider: value as AuthProvider | "arcadis",
                       }))
                     }
                   >
@@ -648,9 +663,16 @@ export function ConnectionSelector(): React.ReactElement {
                       <SelectItem value="msal">
                         MS Entra (Azure Digital Twins)
                       </SelectItem>
-                      <SelectItem value="auth0">
-                        Auth0 (Konnektr Graph Self-Hosted)
-                      </SelectItem>
+                      {getMsalConfig() && (
+                        <SelectItem value="arcadis">
+                          Arcadis IAM (Azure B2C)
+                        </SelectItem>
+                      )}
+                      {!auth0Disabled && (
+                        <SelectItem value="auth0">
+                          Auth0 (Konnektr Graph Self-Hosted)
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground mt-1">
@@ -658,6 +680,8 @@ export function ConnectionSelector(): React.ReactElement {
                       "No authentication required"}
                     {form.authProvider === "msal" &&
                       "Azure Entra authentication with PKCE"}
+                    {form.authProvider === "arcadis" &&
+                      "Authenticated with the deployment-wide Arcadis IAM (Azure B2C)"}
                     {form.authProvider === "auth0" && "Auth0 authentication"}
                   </p>
                 </div>
@@ -780,6 +804,7 @@ export function ConnectionSelector(): React.ReactElement {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      )}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
-import { useAuth0 } from "@auth0/auth0-react";
+import { useAuth } from "@/services/auth/authContext";
+import { isAuth0Disabled } from "@/config/flavor";
 import { fetchGraphResources } from "@/services/ktrlplaneClient";
 import { useConnectionStore } from "@/stores/connectionStore";
 
 /**
  * Manages KtrlPlane connection fetching and deduplication.
- * Must be a child of KtrlPlaneAuthProvider to access Auth0 context.
+ * No-ops when Auth0 is disabled for the deployment.
  */
 export function KtrlPlaneConnectionManager() {
-  const { isAuthenticated, getAccessTokenSilently } = useAuth0();
+  const { isAuthenticated, getAccessTokenSilently } = useAuth();
   const setKtrlPlaneConnections = useConnectionStore(
     (state) => state.setKtrlPlaneConnections
   );
@@ -16,7 +17,7 @@ export function KtrlPlaneConnectionManager() {
 
   // Fetch KtrlPlane connections on mount if authenticated
   useEffect(() => {
-    if (!isAuthenticated || hasInitialFetch) return;
+    if (isAuth0Disabled() || !isAuthenticated || hasInitialFetch) return;
 
     const fetchKtrlPlaneResources = async () => {
       try {

@@ -3,7 +3,8 @@ import {
   PublicClientApplication,
   InteractionRequiredAuthError,
 } from "@azure/msal-browser";
-import { useAuth0 } from "@auth0/auth0-react";
+import { useAuth } from "@/services/auth/authContext";
+import { acquireB2CToken, getB2CScope } from "@/services/environmentRouting";
 import type { Connection, AuthConfig } from "@/stores/connectionStore";
 
 /**
@@ -198,7 +199,7 @@ export class Auth0TokenCredential implements TokenCredential {
 export function useAuth0Credential(
   config: AuthConfig
 ): Auth0TokenCredential | null {
-  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
+  const { getAccessTokenSilently, isAuthenticated } = useAuth();
 
   if (!isAuthenticated || !config.audience) {
     return null;
@@ -307,6 +308,54 @@ export class KtrlPlaneGraphTokenCredential implements TokenCredential {
 }
 
 /**
+ * B2C Token Credential for environment-managed connections.
+ *
+ * Backed by the DEPLOYMENT-WIDE B2C configuration rather than a per-connection
+ * authConfig: the proxy authorizes the caller's B2C token and resolves the
+ * graph backend from the environment identifier. Acquires tokens via the shared
+ * MSAL singleton in `environmentRouting.ts`.
+ */
+export class B2CTokenCredential implements TokenCredential {
+  private pendingTokenRequest: Promise<{
+    token: string;
+    expiresOnTimestamp: number;
+  }> | null = null;
+
+  /**
+   * Get an access token from the deployment-wide B2C configuration.
+   * Implements TokenCredential interface from @azure/core-auth.
+   * The pending request is memoized so concurrent calls share a single token
+   * request and never open multiple popups.
+   */
+  async getToken(): Promise<{ token: string; expiresOnTimestamp: number }> {
+    if (this.pendingTokenRequest) {
+      console.log("Reusing pending B2C token request");
+      return this.pendingTokenRequest;
+    }
+
+    this.pendingTokenRequest = (async () => {
+      const scope = getB2CScope();
+      const token = await acquireB2CToken(scope ? [scope] : []);
+      if (!token) {
+        throw new Error(
+          "Failed to acquire B2C token. Please sign in with Arcadis IAM."
+        );
+      }
+      return {
+        token,
+        expiresOnTimestamp: Date.now() + 3600000,
+      };
+    })();
+
+    try {
+      return await this.pendingTokenRequest;
+    } finally {
+      this.pendingTokenRequest = null;
+    }
+  }
+}
+
+/**
  * Factory function to create appropriate token credential based on connection config
  *
  * @param connection - Connection with auth provider and config
@@ -320,6 +369,15 @@ export async function getTokenCredential(
 ): Promise<TokenCredential | null> {
   const { authProvider, authConfig } = connection;
 
+  // Environment-managed connections authenticate with the deployment-wide B2C
+  // config — they carry no per-connection authConfig by design.
+  if (
+    connection.managedSource === "environments" ||
+    connection.environmentId
+  ) {
+    return new B2CTokenCredential();
+  }
+
   if (authProvider === "none") {
     // If authProvider is 'none', use a dummy credential
     const tokenCredential = {
@@ -332,6 +390,10 @@ export async function getTokenCredential(
   }
 
   if (authProvider === "msal") {
+    if (authConfig?.isB2C) {
+      // Custom connection authenticated with the deployment-wide B2C config.
+      return new B2CTokenCredential();
+    }
     if (!authConfig) {
       throw new Error("MSAL authentication requires configuration");
     }

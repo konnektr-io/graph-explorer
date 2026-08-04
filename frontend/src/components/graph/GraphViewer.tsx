@@ -7,7 +7,7 @@ import { useConnectionStore } from "@/stores/connectionStore";
 import { digitalTwinsClientFactory } from "@/services/digitalTwinsClientFactory";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, Network } from "lucide-react";
-import { useAuth0 } from "@auth0/auth0-react";
+import { useAuth } from "@/services/auth/authContext";
 import forceAtlas2 from "graphology-layout-forceatlas2";
 import circular from "graphology-layout/circular";
 import random from "graphology-layout/random";
@@ -101,7 +101,7 @@ export function GraphViewer({
   const hasFetchedRelationshipsRef = useRef(false);
 
   const { queryRelationships } = useDigitalTwinsStore();
-  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth0();
+  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth();
 
   // Create stable dependency that only changes when twin IDs actually change
   const twinIds = useMemo(() => {

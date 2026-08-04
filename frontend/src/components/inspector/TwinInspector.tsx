@@ -22,7 +22,7 @@ import {
   getModelPropertyDefinitions,
   getModelRelationshipDefinitions,
 } from "@/utils/dtdlHelpers";
-import { useAuth0 } from "@auth0/auth0-react";
+import { useAuth } from "@/services/auth/authContext";
 import { CreateRelationshipDialog } from "@/components/layout/CreateRelationshipDialog";
 
 interface TwinInspectorProps {
@@ -38,7 +38,7 @@ export function TwinInspector({ twinId }: TwinInspectorProps) {
     deleteRelationship,
   } = useDigitalTwinsStore();
   const { selectItem } = useInspectorStore();
-  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth0();
+  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 

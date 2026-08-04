@@ -29,6 +29,10 @@ export interface AuthConfig {
 
   // Common
   redirectUri?: string; // Defaults to window.location.origin
+
+  // B2C-authored configs (custom "Arcadis IAM" connections) — the credential is
+  // resolved from the deployment-wide B2C configuration instead of this object.
+  isB2C?: boolean;
 }
 
 /**
@@ -395,6 +399,15 @@ export function validateConnectionAuth(connection: Connection): string | null {
 
   if (!connection.adtHost && !connection.environmentId) {
     return "A connection requires either a Host or an Environment ID";
+  }
+
+  // Environment-managed connections authenticate with the deployment-wide B2C
+  // config — they carry no per-connection authConfig by design.
+  if (
+    connection.managedSource === "environments" ||
+    connection.environmentId
+  ) {
+    return null;
   }
 
   if (authProvider === "none") {
