@@ -11,7 +11,10 @@
  */
 import type { AccountInfo } from "@azure/msal-browser";
 import { PublicClientApplication } from "@azure/msal-browser";
-import type { Environment } from "@/services/environmentsClient";
+import {
+  classifyEnvironmentHost,
+  type Environment,
+} from "@/services/environmentsClient";
 import type { AuthProvider, Connection } from "@/stores/connectionStore";
 
 /**
@@ -165,5 +168,9 @@ export function environmentToConnection(env: Environment): Connection {
     authProvider: "msal" as AuthProvider,
     managedSource: "environments",
     status: env.status,
+    // Display-only: classifies the backend kind (ADT vs self-hosted Konnektr
+    // Graph) for the connection tag. Never sets `adtHost` — that field drives
+    // `x-adt-host` routing, which environment connections must not use.
+    environmentType: classifyEnvironmentHost(env.adtHost),
   };
 }

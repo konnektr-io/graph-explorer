@@ -185,4 +185,29 @@ describe("environmentRouting — environmentToConnection", () => {
       "Environment: X"
     );
   });
+
+  it("derives environmentType from adtHost without touching routing fields", () => {
+    const adt = environmentToConnection({
+      id: "adt-1",
+      name: "ADT",
+      adtHost: "my-adt.digitaltwins.azure.net",
+    });
+    expect(adt.environmentType).toBe("adt");
+    expect(adt.adtHost).toBeUndefined();
+    expect(adt.environmentId).toBe("adt-1");
+
+    const selfHosted = environmentToConnection({
+      id: "self-1",
+      name: "Self-hosted",
+      adtHost: "graph.arcadis.com",
+    });
+    expect(selfHosted.environmentType).toBe("konnektr-graph");
+    expect(selfHosted.adtHost).toBeUndefined();
+  });
+
+  it("keeps environmentType unknown when the environment has no adtHost", () => {
+    expect(environmentToConnection({ id: "x", name: "X" }).environmentType).toBe(
+      "unknown"
+    );
+  });
 });
