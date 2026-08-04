@@ -429,8 +429,7 @@ export function ConnectionSelector(): React.ReactElement {
               <SelectLabel>{ENVIRONMENTS_LABEL}</SelectLabel>
               {environmentConnections.map((conn) => {
                 const isHealthy = conn.status !== "Unhealthy";
-                const type = conn.environmentType ?? "unknown";
-                const typeTag = type !== "unknown";
+                const type = conn.environmentType ?? "custom";
                 return (
                   <SelectItem
                     key={conn.id}
@@ -439,28 +438,19 @@ export function ConnectionSelector(): React.ReactElement {
                   >
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{conn.name}</span>
-                      {typeTag ? (
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded font-semibold ${
-                            type === "adt"
-                              ? "bg-blue-100 text-blue-800"
-                              : "bg-slate-100 text-slate-800"
-                          }`}
-                        >
-                          {ENVIRONMENT_TYPE_LABELS[type]}
-                        </span>
-                      ) : (
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded font-semibold ${
-                            isHealthy
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                          title={conn.status}
-                        >
-                          {conn.status || "Unknown"}
-                        </span>
-                      )}
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded font-semibold ${
+                          type === "azure"
+                            ? "bg-blue-100 text-blue-800"
+                            : type === "arcadis"
+                            ? "bg-orange-100 text-orange-800"
+                            : type === "konnektr"
+                            ? "bg-slate-100 text-slate-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {ENVIRONMENT_TYPE_LABELS[type]}
+                      </span>
                     </div>
                   </SelectItem>
                 );

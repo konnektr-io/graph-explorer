@@ -35,43 +35,46 @@ export interface Environment {
 /**
  * Backend kind of an environment, derived from its `adtHost`.
  *
- * - `adt` — Azure Digital Twins (host ends with `digitaltwins.azure.net`)
- * - `konnektr-graph` — self-hosted Konnektr Graph (`arcadis.com`, `cluster.local`)
- * - `unknown` — host absent or unrecognised
+ * - `azure` — Azure Digital Twins (host ends with `digitaltwins.azure.net`)
+ * - `arcadis` — Arcadis-managed self-hosted Konnektr Graph (`.arcadis.com`)
+ * - `konnektr` — other self-hosted Konnektr Graph (`.cluster.local`)
+ * - `custom` — host present but unrecognised
  */
-export type EnvironmentType = "adt" | "konnektr-graph" | "unknown";
+export type EnvironmentType = "azure" | "arcadis" | "konnektr" | "custom";
 
-const ADT_HOST_SUFFIX = "digitaltwins.azure.net";
-const SELF_HOSTED_SUFFIXES = ["arcadis.com", "cluster.local"] as const;
+const AZURE_HOST_SUFFIX = "digitaltwins.azure.net";
+const ARCADIS_HOST_SUFFIX = "arcadis.com";
+const KONNEKTR_HOST_SUFFIX = "cluster.local";
 
 /**
  * Classify an environment's backend kind from its `adtHost`.
  *
  * The host is matched by suffix (case-insensitive, protocol-stripped), which is
  * the contract Arcadis deployments rely on: Azure Digital Twins instances end
- * with `digitaltwins.azure.net`, self-hosted Konnektr Graph instances end with
- * `arcadis.com` or `cluster.local`.
+ * with `digitaltwins.azure.net`, Arcadis-managed Konnektr Graph instances end
+ * with `arcadis.com`, and other self-hosted Konnektr Graph instances end with
+ * `cluster.local`. Anything else is "custom".
  */
 export function classifyEnvironmentHost(adtHost?: string): EnvironmentType {
-  if (!adtHost) return "unknown";
+  if (!adtHost) return "custom";
 
   const host = adtHost
     .toLowerCase()
     .replace(/^https?:\/\//, "")
     .replace(/\/+$/, "");
 
-  if (host.endsWith(ADT_HOST_SUFFIX)) return "adt";
-  if (SELF_HOSTED_SUFFIXES.some((suffix) => host.endsWith(suffix))) {
-    return "konnektr-graph";
-  }
-  return "unknown";
+  if (host.endsWith(AZURE_HOST_SUFFIX)) return "azure";
+  if (host.endsWith(ARCADIS_HOST_SUFFIX)) return "arcadis";
+  if (host.endsWith(KONNEKTR_HOST_SUFFIX)) return "konnektr";
+  return "custom";
 }
 
 /** Display labels for {@link EnvironmentType}. */
 export const ENVIRONMENT_TYPE_LABELS: Record<EnvironmentType, string> = {
-  adt: "ADT",
-  "konnektr-graph": "Konnektr Graph",
-  unknown: "Unknown",
+  azure: "Azure",
+  arcadis: "Arcadis",
+  konnektr: "Konnektr",
+  custom: "Custom",
 };
 
 /** Raw, unnormalised environment record as returned by the API. */
