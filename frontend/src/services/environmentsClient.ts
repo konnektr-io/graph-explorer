@@ -37,14 +37,21 @@ export interface Environment {
  *
  * - `azure` — Azure Digital Twins (host ends with `digitaltwins.azure.net`)
  * - `arcadis` — Arcadis-managed self-hosted Konnektr Graph (`.arcadis.com`)
- * - `konnektr` — other self-hosted Konnektr Graph (`.cluster.local`)
+ * - `cluster` — self-hosted Konnektr Graph cluster (`.cluster.local`)
+ * - `konnektr` — Konnektr Graph (`.konnektr.io`)
  * - `custom` — host present but unrecognised
  */
-export type EnvironmentType = "azure" | "arcadis" | "konnektr" | "custom";
+export type EnvironmentType =
+  | "azure"
+  | "arcadis"
+  | "cluster"
+  | "konnektr"
+  | "custom";
 
 const AZURE_HOST_SUFFIX = "digitaltwins.azure.net";
 const ARCADIS_HOST_SUFFIX = "arcadis.com";
-const KONNEKTR_HOST_SUFFIX = "cluster.local";
+const CLUSTER_HOST_SUFFIX = "cluster.local";
+const KONNEKTR_HOST_SUFFIX = "konnektr.io";
 
 /**
  * Classify an environment's backend kind from its `adtHost`.
@@ -52,8 +59,9 @@ const KONNEKTR_HOST_SUFFIX = "cluster.local";
  * The host is matched by suffix (case-insensitive, protocol-stripped), which is
  * the contract Arcadis deployments rely on: Azure Digital Twins instances end
  * with `digitaltwins.azure.net`, Arcadis-managed Konnektr Graph instances end
- * with `arcadis.com`, and other self-hosted Konnektr Graph instances end with
- * `cluster.local`. Anything else is "custom".
+ * with `arcadis.com`, self-hosted Konnektr Graph clusters end with
+ * `cluster.local`, and Konnektr Graph instances end with `konnektr.io`.
+ * Anything else is "custom".
  */
 export function classifyEnvironmentHost(adtHost?: string): EnvironmentType {
   if (!adtHost) return "custom";
@@ -65,6 +73,7 @@ export function classifyEnvironmentHost(adtHost?: string): EnvironmentType {
 
   if (host.endsWith(AZURE_HOST_SUFFIX)) return "azure";
   if (host.endsWith(ARCADIS_HOST_SUFFIX)) return "arcadis";
+  if (host.endsWith(CLUSTER_HOST_SUFFIX)) return "cluster";
   if (host.endsWith(KONNEKTR_HOST_SUFFIX)) return "konnektr";
   return "custom";
 }
@@ -73,6 +82,7 @@ export function classifyEnvironmentHost(adtHost?: string): EnvironmentType {
 export const ENVIRONMENT_TYPE_LABELS: Record<EnvironmentType, string> = {
   azure: "Azure",
   arcadis: "Arcadis",
+  cluster: "Cluster",
   konnektr: "Konnektr",
   custom: "Custom",
 };
