@@ -179,10 +179,15 @@ describe("environmentsClient", () => {
       expect(classifyEnvironmentHost("twins.arcadis.com")).toBe("arcadis");
     });
 
-    it("classifies other self-hosted Konnektr Graph hosts by .cluster.local suffix", () => {
+    it("classifies self-hosted Konnektr Graph cluster hosts by .cluster.local suffix", () => {
       expect(classifyEnvironmentHost("env-1.svc.cluster.local")).toBe(
-        "konnektr"
+        "cluster"
       );
+    });
+
+    it("classifies Konnektr Graph hosts by .konnektr.io suffix", () => {
+      expect(classifyEnvironmentHost("graph.konnektr.io")).toBe("konnektr");
+      expect(classifyEnvironmentHost("api.konnektr.io")).toBe("konnektr");
     });
 
     it("strips protocol and is case-insensitive", () => {
@@ -203,6 +208,7 @@ describe("environmentsClient", () => {
     it("exposes a display label for every type", () => {
       expect(ENVIRONMENT_TYPE_LABELS.azure).toBe("Azure");
       expect(ENVIRONMENT_TYPE_LABELS.arcadis).toBe("Arcadis");
+      expect(ENVIRONMENT_TYPE_LABELS.cluster).toBe("Cluster");
       expect(ENVIRONMENT_TYPE_LABELS.konnektr).toBe("Konnektr");
       expect(ENVIRONMENT_TYPE_LABELS.custom).toBe("Custom");
     });

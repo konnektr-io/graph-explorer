@@ -204,10 +204,18 @@ describe("environmentRouting — environmentToConnection", () => {
     expect(arcadis.environmentType).toBe("arcadis");
     expect(arcadis.adtHost).toBeUndefined();
 
-    const konnektr = environmentToConnection({
+    const cluster = environmentToConnection({
       id: "self-1",
-      name: "Self-hosted",
+      name: "Self-hosted Cluster",
       adtHost: "env-1.svc.cluster.local",
+    });
+    expect(cluster.environmentType).toBe("cluster");
+    expect(cluster.adtHost).toBeUndefined();
+
+    const konnektr = environmentToConnection({
+      id: "kktr-1",
+      name: "Konnektr Graph",
+      adtHost: "graph.konnektr.io",
     });
     expect(konnektr.environmentType).toBe("konnektr");
     expect(konnektr.adtHost).toBeUndefined();
