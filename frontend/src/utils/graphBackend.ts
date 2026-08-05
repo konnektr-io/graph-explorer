@@ -26,7 +26,7 @@ export const CYPHER_TWIN_COUNT_QUERY =
 export const DEFAULT_CYPHER_SAMPLE_QUERY = "MATCH (n:Twin) RETURN n LIMIT 5";
 
 /** Default sample query for Azure Digital Twins instances (ADT SQL). */
-export const DEFAULT_ADT_SAMPLE_QUERY = "SELECT TOP(5) * FROM DIGITALTWINS";
+export const DEFAULT_ADT_SAMPLE_QUERY = "SELECT TOP(5) FROM DIGITALTWINS";
 
 /**
  * Decide which backend a connection points at.
