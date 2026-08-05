@@ -29,6 +29,7 @@ import { useAuth } from "@/services/auth/authContext";
 import { useDigitalTwinsStore } from "@/stores/digitalTwinsStore";
 import { useQueryStore } from "@/stores/queryStore";
 import { getModelDisplayName } from "@/utils/dtdlHelpers";
+import { isAdtBackend } from "@/utils/graphBackend";
 import type { DigitalTwinsModelDataExtended } from "@/types";
 import { ImportModelsDialog } from "./ImportModelsDialog";
 import { CreateTwinDialog } from "./CreateTwinDialog";
@@ -270,12 +271,10 @@ export function ModelSidebar() {
 
   const handleQueryTwins = async (modelId: string) => {
     // Build query to select all twins of this model
-    // Use Cypher for KtrlPlane/Konnektr, ADT query for Azure Digital Twins
-    const isKtrlPlane =
-      currentConnection?.authProvider === "ktrlplane" ||
-      currentConnection?.adtHost?.includes("konnektr.io");
+    // Use Cypher for Konnektr Graph, ADT query for Azure Digital Twins
+    const isKonnektrGraph = !isAdtBackend(currentConnection);
 
-    const query = isKtrlPlane
+    const query = isKonnektrGraph
       ? `MATCH (t:Twin) WHERE digitaltwins.is_of_model(t,'${modelId}') RETURN t`
       : `SELECT * FROM DIGITALTWINS WHERE IS_OF_MODEL('${modelId}')`;
 

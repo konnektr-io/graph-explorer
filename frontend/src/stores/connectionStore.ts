@@ -164,6 +164,7 @@ export const useConnectionStore = create<ConnectionState>()(
           const { useInspectorStore } = await import("./inspectorStore");
 
           useQueryStore.getState().clearQueryResults();
+          useQueryStore.getState().setDefaultQueryForConnection(conn);
           useModelsStore.getState().clearModels();
           useInspectorStore.getState().clearSelection();
 

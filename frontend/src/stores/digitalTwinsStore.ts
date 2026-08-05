@@ -17,6 +17,7 @@ import {
   type QueryResponseData,
 } from "@/utils/queryAdt";
 import { formatApiError } from "@/utils/errorHelpers";
+import { getTwinCountQuery, parseTwinCounts } from "@/utils/graphBackend";
 /**
  * Helper to get initialized Digital Twins client
  * Throws error if connection is not configured
@@ -196,42 +197,16 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
              auth?.getAccessTokenWithPopup
         );
 
-        let query = "SELECT $metadata.$model FROM DIGITALTWINS";
-        let isCypher = false;
-
-        // Use efficient Cypher query for KtrlPlane connections
-        if (
-          connection?.authProvider === "ktrlplane" ||
-          connection?.adtHost?.includes("konnektr.io")
-        ) {
-          query =
-            "MATCH (t:Twin) RETURN t.`$metadata`.`$model` AS _modelId, count(*)";
-          isCypher = true;
-        }
+        // Pick the right count query + result shape for the backend:
+        // - Azure ADT: projection (no aggregation support), count rows client-side.
+        // - Konnektr Graph (self-hosted / KtrlPlane): one aggregation query.
+        const { query, isCypher } = getTwinCountQuery(connection);
 
         const iterator = client.queryTwins(query);
         const counts: Record<string, number> = {};
 
         for await (const page of iterator.byPage()) {
-             for (const item of page.value) {
-                 if (isCypher) {
-                     // Handle KtrlPlane Cypher result format
-                     const row = item as Record<string, any>;
-                     if (row._modelId) {
-                         // Support aliased 'count' or raw 'count(*)'
-                         const countVal = row.count ?? row["count(*)"];
-                         if (typeof countVal === 'number') {
-                             counts[row._modelId] = countVal;
-                         }
-                     }
-                 } else {
-                     // Handle Standard ADT result format
-                     const modelId = (item as any).$metadata?.$model;
-                     if (modelId) {
-                         counts[modelId] = (counts[modelId] || 0) + 1;
-                     }
-                 }
-             }
+          Object.assign(counts, parseTwinCounts(page.value, isCypher));
         }
 
         set({ twinCounts: counts, error: null });

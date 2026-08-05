@@ -3,7 +3,13 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { digitalTwinsClientFactory } from "@/services/digitalTwinsClientFactory";
 import { useConnectionStore } from "./connectionStore";
+import type { Connection } from "./connectionStore";
 import { formatTwinForDisplay } from "@/utils/dtdlHelpers";
+import {
+  DEFAULT_ADT_SAMPLE_QUERY,
+  DEFAULT_CYPHER_SAMPLE_QUERY,
+  isAdtBackend,
+} from "@/utils/graphBackend";
 
 export interface QueryTab {
   id: string;
@@ -49,6 +55,7 @@ export interface QueryState {
 
   // New actions for query execution
   setCurrentQuery: (query: string) => void;
+  setDefaultQueryForConnection: (connection?: Connection | null) => void;
   clearQueryResults: () => void;
   executeQuery: (
     query: string,
@@ -67,7 +74,7 @@ const generateTabId = () => Date.now().toString();
 const createDefaultTab = (overrides?: Partial<QueryTab>): QueryTab => ({
   id: generateTabId(),
   name: "Untitled",
-  query: "-- Cypher Query (Ctrl+Enter to run)\nSELECT TOP(5) FROM DIGITALTWINS",
+  query: DEFAULT_CYPHER_SAMPLE_QUERY,
   saved: true,
   language: "cypher",
   ...overrides,
@@ -81,7 +88,7 @@ export const useQueryStore = create<QueryState>()(
       activeTabId: null,
 
       // Current query state
-      currentQuery: "MATCH (n:Twin) RETURN n LIMIT 5",
+      currentQuery: DEFAULT_CYPHER_SAMPLE_QUERY,
       isExecuting: false,
       queryResults: null,
       queryError: null,
@@ -161,6 +168,26 @@ export const useQueryStore = create<QueryState>()(
 
       // New action methods
       setCurrentQuery: (query) => set({ currentQuery: query }),
+
+      /**
+       * Point the editor at the backend-appropriate sample query, but only while
+       * the editor still holds one of the built-in defaults. A query the user
+       * typed or pasted is left untouched.
+       */
+      setDefaultQueryForConnection: (connection) => {
+        set((state) => {
+          const isDefaultSample =
+            state.currentQuery.trim() === DEFAULT_CYPHER_SAMPLE_QUERY ||
+            state.currentQuery.trim() === DEFAULT_ADT_SAMPLE_QUERY ||
+            state.currentQuery.trim() === "";
+          if (!isDefaultSample) return {};
+          return {
+            currentQuery: isAdtBackend(connection)
+              ? DEFAULT_ADT_SAMPLE_QUERY
+              : DEFAULT_CYPHER_SAMPLE_QUERY,
+          };
+        });
+      },
 
       clearQueryResults: () => set({ queryResults: null, queryError: null }),
 
