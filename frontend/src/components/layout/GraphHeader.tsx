@@ -14,6 +14,7 @@ import { useConnectionStore } from "../../stores/connectionStore";
 import { ModeToggle } from "../mode-toggle";
 import { ConnectionSelector } from "@/components/ConnectionSelector";
 import { useAuth } from "@/services/auth/authContext";
+import { isAuthConfigured } from "@/services/auth/AuthProvider";
 import konnektrLogo from "@/assets/konnektr.svg";
 
 export function GraphHeader() {
@@ -211,10 +212,16 @@ export function GraphHeader() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button size="sm" className="gap-2" onClick={handleLogin}>
-              <LogIn className="w-4 h-4" />
-              Sign In
-            </Button>
+            // No auth configured in this build (stock konnektr image without
+            // Auth0 variables): sign-in would only reject, so hide the button
+            // instead of offering a dead interaction. Custom connections with
+            // auth None work fully anonymous.
+            isAuthConfigured() ? (
+              <Button size="sm" className="gap-2" onClick={handleLogin}>
+                <LogIn className="w-4 h-4" />
+                Sign In
+              </Button>
+            ) : null
           )}
         </div>
       </div>

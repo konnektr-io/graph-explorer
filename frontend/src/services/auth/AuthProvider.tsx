@@ -1,6 +1,7 @@
 import { Auth0Provider, useAuth0 } from "@auth0/auth0-react";
 import type { ReactNode } from "react";
 import { isAuth0Disabled } from "@/config/flavor";
+import { getMsalConfig } from "@/services/environmentRouting";
 import {
   AuthContext,
   useB2CAuthValue,
@@ -42,13 +43,49 @@ interface AuthProviderProps {
 }
 
 /**
+ * Whether this build can authenticate users at all: the Arcadis flavor via
+ * the deployment-wide B2C config, otherwise via a baked-in Auth0 client id.
+ * When false the app runs fully anonymous — custom connections with auth
+ * None need no sign-in. This is the normal state of the stock konnektr
+ * image, which ships without Auth0 variables.
+ */
+export function isAuthConfigured(): boolean {
+  if (isAuth0Disabled()) {
+    return getMsalConfig() !== null;
+  }
+  return Boolean(import.meta.env.VITE_AUTH0_CLIENT_ID);
+}
+
+const authNotConfiguredError = () =>
+  new Error(
+    "Authentication is not configured in this build — custom connections " +
+      "with auth None work without sign-in."
+  );
+
+/**
+ * Anonymous auth surface for builds without any auth configured (stock
+ * konnektr image without Auth0 variables). Every consumer gets a valid
+ * context with `isAuthenticated: false`, so `useAuth()` never throws and
+ * the KtrlPlane/environment managers simply stay idle.
+ */
+const anonymousAuthValue: AuthContextValue = {
+  isAuthenticated: false,
+  user: undefined,
+  login: () => Promise.reject(authNotConfiguredError()),
+  loginWithRedirect: () => Promise.reject(authNotConfiguredError()),
+  logout: () => {},
+  getAccessTokenSilently: () => Promise.reject(authNotConfiguredError()),
+  getAccessTokenWithPopup: () => Promise.resolve(undefined),
+};
+
+/**
  * Root auth provider.
  *
  * - Arcadis flavor (`VITE_AUTH0_DISABLED=true`): B2C-backed, no Auth0Provider.
  * - Auth0 enabled: wraps children in Auth0Provider (the Auth0 config previously
  *   owned by `KtrlPlaneAuthProvider`) and bridges its context.
- * - Auth0 enabled but misconfigured: renders children directly (current
- *   behavior — the app works without KtrlPlane auth).
+ * - Auth0 enabled but misconfigured: provides an anonymous context — the app
+ *   works without KtrlPlane auth (custom connections with auth None).
  */
 export function AuthProvider({ children }: AuthProviderProps) {
   if (isAuth0Disabled()) {
@@ -66,7 +103,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     console.warn(
       "KtrlPlane Auth0 configuration missing. User authentication will be unavailable."
     );
-    return <>{children}</>;
+    return (
+      <AuthContext.Provider value={anonymousAuthValue}>
+        {children}
+      </AuthContext.Provider>
+    );
   }
 
   const onRedirectCallback = (appState?: { returnTo?: string }) => {
