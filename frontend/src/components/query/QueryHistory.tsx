@@ -92,9 +92,14 @@ export function QueryHistory() {
                         addSuffix: true,
                       })}
                     </span>
-                    {item.executionTime && (
+                    {item.executionTime !== undefined && (
                       <Badge variant="outline" className="text-xs">
                         {formatExecutionTime(item.executionTime)}
+                      </Badge>
+                    )}
+                    {item.cancelled && (
+                      <Badge variant="outline" className="text-xs">
+                        Cancelled
                       </Badge>
                     )}
                     {item.resultCount !== undefined && (

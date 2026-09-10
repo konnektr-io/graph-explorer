@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { useInspectorStore } from "@/stores/inspectorStore";
 import { GraphViewer } from "@/components/graph/GraphViewer";
 import { transformResultsToGraph } from "@/utils/queryResultsTransformer";
+import { formatDuration } from "@/utils/formatDuration";
 import {
   analyzeDataStructure,
   type TableViewMode,
@@ -32,9 +33,19 @@ interface QueryResultsProps {
   results: unknown[] | null;
   error: string | null;
   isLoading: boolean;
+  /** Wall-clock duration of the last finished run (undefined = no timing yet). */
+  executionTimeMs?: number;
+  /** True when the last finished run was cancelled by the user (issue #22). */
+  cancelled?: boolean;
 }
 
-export function QueryResults({ results, error, isLoading }: QueryResultsProps) {
+export function QueryResults({
+  results,
+  error,
+  isLoading,
+  executionTimeMs,
+  cancelled,
+}: QueryResultsProps) {
   const [viewMode, setViewMode] = useState<"table" | "raw" | "graph">("table");
 
   // Analyze data structure and set smart default for table view mode
@@ -170,8 +181,24 @@ export function QueryResults({ results, error, isLoading }: QueryResultsProps) {
         <div className="flex items-center gap-3">
           <h3 className="font-semibold text-sm">Query Results</h3>
           {results && (
-            <Badge variant="secondary" className="text-xs">
-              {results.length} rows
+            <>
+              <Badge variant="secondary" className="text-xs">
+                {results.length} rows
+              </Badge>
+              {executionTimeMs !== undefined && !cancelled && (
+                <Badge
+                  variant="outline"
+                  className="text-xs"
+                  title="Time to run this query"
+                >
+                  in {formatDuration(executionTimeMs)}
+                </Badge>
+              )}
+            </>
+          )}
+          {cancelled && (
+            <Badge variant="outline" className="text-xs">
+              Cancelled
             </Badge>
           )}
         </div>
