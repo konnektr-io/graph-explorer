@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { OnboardingDialog } from "./OnboardingDialog";
+import { ConnectionSelect } from "./ConnectionSelect";
 import {
   useConnectionStore,
   validateConnectionAuth,
@@ -10,9 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
 } from "@/components/ui/select";
 import {
   Dialog,
@@ -38,11 +37,9 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Trash2, MoreVertical, RefreshCw, Pencil, Sprout } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/services/auth/authContext";
 import { isAuth0Disabled, isCustomConnectionsDisabled } from "@/config/flavor";
 import { fetchGraphResources } from "@/services/ktrlplaneClient";
-import { ENVIRONMENT_TYPE_LABELS } from "@/services/environmentsClient";
 import { ENVIRONMENTS_LABEL, getMsalConfig } from "@/services/environmentRouting";
 import {
   DropdownMenu,
@@ -380,113 +377,14 @@ export function ConnectionSelector(): React.ReactElement {
 
   return (
     <div className="flex items-center gap-1">
-      <Select
-        value={currentConnectionId || ""}
+      <ConnectionSelect
+        value={currentConnectionId}
         onValueChange={setCurrentConnection}
-      >
-        <SelectTrigger className="min-w-[180px]">
-          <SelectValue placeholder="Select connection..." />
-        </SelectTrigger>
-        <SelectContent>
-          {ktrlPlaneConnections.length > 0 && (
-            <SelectGroup>
-              <SelectLabel>Konnektr Managed</SelectLabel>
-              {ktrlPlaneConnections.map((conn) => {
-                const isHealthy = conn.status === "Healthy";
-                return (
-                  <SelectItem
-                    key={conn.id}
-                    value={conn.id}
-                    disabled={!isHealthy}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{conn.name}</span>
-                      {conn.id && (
-                        <span className="text-xs text-muted-foreground">
-                          {conn.id}
-                        </span>
-                      )}
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded font-semibold ${
-                          isHealthy
-                            ? "bg-green-100 text-green-800"
-                            : conn.status === "Progressing"
-                            ? "bg-blue-100 text-blue-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
-                        title={conn.status}
-                      >
-                        {conn.status}
-                      </span>
-                    </div>
-                  </SelectItem>
-                );
-              })}
-            </SelectGroup>
-          )}
-          {environmentConnections.length > 0 && (
-            <SelectGroup>
-              <SelectLabel>{ENVIRONMENTS_LABEL}</SelectLabel>
-              {environmentConnections.map((conn) => {
-                const isHealthy = conn.status !== "Unhealthy";
-                const type = conn.environmentType ?? "custom";
-                return (
-                  <SelectItem
-                    key={conn.id}
-                    value={conn.id}
-                    disabled={!isHealthy}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{conn.name}</span>
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded font-semibold ${
-                          type === "azure"
-                            ? "bg-blue-100 text-blue-800"
-                            : type === "arcadis"
-                            ? "bg-orange-100 text-orange-800"
-                            : type === "cluster"
-                            ? "bg-emerald-100 text-emerald-800"
-                            : type === "konnektr"
-                            ? "bg-slate-100 text-slate-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {ENVIRONMENT_TYPE_LABELS[type]}
-                      </span>
-                    </div>
-                  </SelectItem>
-                );
-              })}
-            </SelectGroup>
-          )}
-          <SelectGroup>
-            <SelectLabel>
-              {ktrlPlaneConnections.length > 0
-                ? "Custom Connections"
-                : "Connections"}
-            </SelectLabel>
-            {localConnections.map((conn) => {
-              const isDemo =
-                conn.authProvider === "none" &&
-                (conn.name?.toLowerCase().includes("demo") ||
-                  conn.adtHost === "demo.api.graph.konnektr.io");
-              return (
-                <SelectItem key={conn.id} value={conn.id}>
-                  <div className="flex items-center gap-2">
-                    <span>{conn.name}</span>
-                    {isDemo && <Badge variant="secondary">Demo</Badge>}
-                    {conn.authProvider !== "none" && (
-                      <span className="text-xs text-muted-foreground px-1.5 py-0.5 rounded bg-secondary">
-                        {conn.authProvider}
-                      </span>
-                    )}
-                  </div>
-                </SelectItem>
-              );
-            })}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
+        ktrlPlaneConnections={ktrlPlaneConnections}
+        environmentConnections={environmentConnections}
+        localConnections={localConnections}
+        environmentsLabel={ENVIRONMENTS_LABEL}
+      />
       {(isAuthenticated || canEditCurrent || canDeleteCurrent) && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
