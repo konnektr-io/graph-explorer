@@ -24,6 +24,8 @@ export interface QueryHistoryItem {
   timestamp: number;
   executionTime?: number;
   resultCount?: number;
+  /** True when the run was cancelled by the user (issue #22). */
+  cancelled?: boolean;
 }
 
 export interface QueryState {
@@ -37,12 +39,25 @@ export interface QueryState {
   queryResults: any[] | null;
   queryError: string | null;
 
+  /**
+   * AbortController for the in-flight query. Undefined when idle; stored via
+   * `set({ abortController })` so the UI can cancel from any component.
+   * Excluded from the persist partialize below (non-serializable runtime handle).
+   */
+  abortController?: AbortController;
+
   // Query history
   queryHistory: QueryHistoryItem[];
   showHistory: boolean;
 
   // Results view state
   resultView: "table" | "graph";
+
+  /** Wall-clock duration (ms) of the last finished run — success, error or cancel. */
+  lastExecutionTime?: number;
+
+  /** True when the last finished run was cancelled by the user (issue #22). */
+  lastRunCancelled: boolean;
 
   // Actions
   addTab: (tab?: Partial<QueryTab>) => string;
@@ -57,6 +72,8 @@ export interface QueryState {
   setCurrentQuery: (query: string) => void;
   setDefaultQueryForConnection: (connection?: Connection | null) => void;
   clearQueryResults: () => void;
+  /** Abort the in-flight query (issue #22). No-op when idle. */
+  cancelQuery: () => void;
   executeQuery: (
     query: string,
     getAccessTokenSilently?: (options?: {
@@ -93,12 +110,17 @@ export const useQueryStore = create<QueryState>()(
       queryResults: null,
       queryError: null,
 
+      abortController: undefined,
+
       // Query history
       queryHistory: [],
       showHistory: false,
 
       // Results view state
       resultView: "table",
+
+      lastExecutionTime: undefined,
+      lastRunCancelled: false,
 
       // Actions
       addTab: (tabOverrides) => {
@@ -196,8 +218,30 @@ export const useQueryStore = create<QueryState>()(
         getAccessTokenSilently,
         getAccessTokenWithPopup
       ) => {
-        set({ isExecuting: true, queryError: null });
+        set({
+          isExecuting: true,
+          queryError: null,
+          // New run: reset the outcome flags of the previous run
+          lastRunCancelled: false,
+        });
         const startTime = Date.now();
+
+        // Collected rows live above the try so a thrown AbortError can still
+        // hand back the partial page (issue #22).
+        const results: any[] = [];
+
+        // Abort handle for this run (issue #22). Stored on the store so any
+        // component can cancel; cleared when the run settles.
+        const abortController = new AbortController();
+        set({ abortController });
+        const isAborted = () => abortController.signal.aborted;
+        // Drop the handle only if it is still ours — a newer run may have
+        // replaced it by the time this one settles.
+        const clearAbort = () => {
+          if (get().abortController === abortController) {
+            set({ abortController: undefined });
+          }
+        };
 
         try {
           // Get current connection
@@ -223,12 +267,16 @@ export const useQueryStore = create<QueryState>()(
             getAccessTokenWithPopup
           );
 
-          // Execute query using Azure SDK
-          const queryResult = client.queryTwins(query);
-          const results: any[] = [];
+          // Execute query using Azure SDK. The abort signal cancels any
+          // in-flight request; the explicit check before each page keeps
+          // cancellation responsive even between page fetches (issue #22).
+          const queryResult = client.queryTwins(query, {
+            abortSignal: abortController.signal,
+          });
 
           // Iterate through paginated results
           for await (const item of queryResult) {
+            if (isAborted()) break;
             // Format twin data for display if it has the structure of a digital twin
             const formattedItem =
               typeof item === "object" && item !== null && "$dtId" in item
@@ -239,10 +287,35 @@ export const useQueryStore = create<QueryState>()(
 
           const executionTime = Date.now() - startTime;
 
+          if (isAborted()) {
+            // User cancelled: distinct cancelled outcome, not the error UI.
+            // Previous results stay on screen; the header shows "Cancelled".
+            set({
+              isExecuting: false,
+              lastExecutionTime: executionTime,
+              lastRunCancelled: true,
+              // Whatever arrived before the cancel (may be [])
+              queryResults: results,
+            });
+            clearAbort();
+
+            // Add to history even when cancelled
+            get().addToHistory({
+              query,
+              timestamp: Date.now(),
+              executionTime,
+              resultCount: results.length,
+              cancelled: true,
+            });
+            return;
+          }
+
           set({
             queryResults: results,
             isExecuting: false,
+            lastExecutionTime: executionTime,
           });
+          clearAbort();
 
           // Add to history
           get().addToHistory({
@@ -254,6 +327,33 @@ export const useQueryStore = create<QueryState>()(
         } catch (error) {
           console.error("Error executing query:", error);
           const executionTime = Date.now() - startTime;
+
+          // Cancelled runs surface as an AbortError (from the fetch pipeline)
+          // or via the signal itself.
+          const cancelled =
+            isAborted() ||
+            (error instanceof Error && error.name === "AbortError");
+
+          if (cancelled) {
+            set({
+              isExecuting: false,
+              lastExecutionTime: executionTime,
+              lastRunCancelled: true,
+              // Show whatever arrived before the cancel (may be []) instead
+              // of dropping the user back to the "Query Failed" screen.
+              queryResults: results,
+            });
+            clearAbort();
+
+            get().addToHistory({
+              query,
+              timestamp: Date.now(),
+              executionTime,
+              resultCount: 0,
+              cancelled: true,
+            });
+            return;
+          }
 
           let errorMessage = "Unknown error occurred";
           if (error instanceof Error) {
@@ -276,7 +376,9 @@ export const useQueryStore = create<QueryState>()(
             queryError: errorMessage,
             isExecuting: false,
             queryResults: null,
+            lastExecutionTime: executionTime,
           });
+          clearAbort();
 
           // Still add to history even on error
           get().addToHistory({
@@ -285,6 +387,13 @@ export const useQueryStore = create<QueryState>()(
             executionTime,
             resultCount: 0,
           });
+        }
+      },
+
+      cancelQuery: () => {
+        const { abortController } = get();
+        if (abortController && !abortController.signal.aborted) {
+          abortController.abort();
         }
       },
 

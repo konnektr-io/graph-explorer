@@ -1,12 +1,37 @@
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { MonacoEditor } from "@/components/query/MonacoEditor";
 import { QueryResults } from "@/components/query/QueryResults";
 import { QueryHistory } from "@/components/query/QueryHistory";
 import { Button } from "@/components/ui/button";
-import { Play, History } from "lucide-react";
+import { Play, History, Square, Loader2 } from "lucide-react";
 import { useQueryStore } from "@/stores/queryStore";
 import { useAuth } from "@/services/auth/authContext";
+import { formatDuration } from "@/utils/formatDuration";
+
+/**
+ * Live elapsed-time counter for a running query (issue #22). Mounted exactly
+ * when a run starts, so its local clock starts with the run.
+ */
+function ElapsedTicker() {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const startedAt = Date.now();
+    const timer = setInterval(
+      () => setElapsed(Date.now() - startedAt),
+      100
+    );
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <span className="flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums">
+      <Loader2 className="w-3 h-3 animate-spin" />
+      Running… {formatDuration(elapsed)}
+    </span>
+  );
+}
 
 export function QueryExplorer() {
   const {
@@ -14,8 +39,11 @@ export function QueryExplorer() {
     setCurrentQuery,
     isExecuting,
     executeQuery,
+    cancelQuery,
     queryResults,
     queryError,
+    lastExecutionTime,
+    lastRunCancelled,
     showHistory,
     setShowHistory,
   } = useQueryStore();
@@ -39,6 +67,10 @@ export function QueryExplorer() {
     await executeQuery(currentQuery, getAccessTokenSilently, getTokenWithPopup);
   };
 
+  const handleCancelQuery = () => {
+    cancelQuery();
+  };
+
   /* const handleSaveQuery = () => {
     // TODO: Implement save query functionality
     console.log("Save query:", currentQuery);
@@ -55,15 +87,30 @@ export function QueryExplorer() {
       {/* Query Toolbar */}
       <div className="flex items-center justify-between p-3 border-b border-border bg-card">
         <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            onClick={handleRunQuery}
-            disabled={isExecuting || !currentQuery.trim()}
-            className="gap-2"
-          >
-            <Play className="w-4 h-4" />
-            {isExecuting ? "Running..." : "Run Query"}
-          </Button>
+          {isExecuting ? (
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={handleCancelQuery}
+              className="gap-2"
+              title="Cancel the running query"
+            >
+              <Square className="w-4 h-4 fill-current" />
+              Cancel
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              onClick={handleRunQuery}
+              disabled={!currentQuery.trim()}
+              className="gap-2"
+            >
+              <Play className="w-4 h-4" />
+              Run Query
+            </Button>
+          )}
+
+          {isExecuting && <ElapsedTicker />}
 
           {/* <Button
             variant="outline"
@@ -148,6 +195,8 @@ export function QueryExplorer() {
                   results={queryResults}
                   error={queryError}
                   isLoading={isExecuting}
+                  executionTimeMs={lastExecutionTime}
+                  cancelled={lastRunCancelled}
                 />
               </Panel>
             </PanelGroup>
