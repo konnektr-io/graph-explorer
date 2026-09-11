@@ -16,7 +16,13 @@ function ScrollArea({
     >
       <ScrollAreaPrimitive.Viewport
         data-slot="scroll-area-viewport"
-        className="focus-visible:ring-ring/50 size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:outline-1"
+        // The viewport is the element that actually scrolls and callers size the
+        // ScrollArea with `max-h-*` on the Root (e.g. the connection dropdown).
+        // `size-full` is `height: 100%`, and a percentage height against a
+        // max-height-only parent resolves to `auto` — so without inheriting the
+        // Root's max-height the viewport grows to the full content height, spills
+        // out of the Root and no scrollbar is ever rendered.
+        className="focus-visible:ring-ring/50 size-full max-h-[inherit] rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:outline-1"
       >
         {children}
       </ScrollAreaPrimitive.Viewport>
