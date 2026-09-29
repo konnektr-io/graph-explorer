@@ -1,0 +1,2 @@
+# Test-only TLS material for the local mock ADT backend — never commit these.
+*.pem

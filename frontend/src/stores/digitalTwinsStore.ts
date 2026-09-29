@@ -18,6 +18,7 @@ import {
 } from "@/utils/queryAdt";
 import { formatApiError } from "@/utils/errorHelpers";
 import { getTwinCountQuery, parseTwinCounts } from "@/utils/graphBackend";
+import { useQueryStore } from "./queryStore";
 /**
  * Helper to get initialized Digital Twins client
  * Throws error if connection is not configured
@@ -304,7 +305,11 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
           auth?.getAccessTokenWithPopup
         );
 
-        // Delete all relationships first
+        // ADT refuses to delete a twin that still has relationships, so every
+        // relationship touching this twin goes first. An INCOMING relationship
+        // is addressed by its *own* source twin, not by this one — deleting
+        // `rel.$sourceId`/id is correct for outgoing, and equally correct for
+        // incoming because the rel carries its real source.
         const rels = await get().queryRelationships(twinId, REL_TYPE_ALL, auth);
         for (const rel of rels) {
           await client.deleteRelationship(rel.$sourceId, rel.$relationshipId);
@@ -322,10 +327,27 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
             state.selectedTwinId === twinId ? null : state.selectedTwinId,
           isLoading: false,
         }));
+
+        // The table and graph render from query results, not from `twins`, so
+        // the deleted twin (and the relationships that went with it) would keep
+        // being drawn until the query is re-run. Prune both, plus the counts
+        // the model sidebar shows.
+        useQueryStore
+          .getState()
+          .pruneDeletedTwins([twinId]);
+        useQueryStore
+          .getState()
+          .pruneDeletedRelationships(rels.map((rel) => rel.$relationshipId));
+
+        void get()
+          .loadTwinCounts(auth)
+          .catch((err) => console.warn("Failed to refresh twin counts:", err));
       } catch (error) {
         set({
-          error:
-            error instanceof Error ? error.message : "Failed to delete twin",
+          error: formatApiError(
+            error,
+            "Failed to delete twin. It may still have relationships."
+          ),
           isLoading: false,
         });
         throw error;
@@ -537,12 +559,15 @@ export const useDigitalTwinsStore = create<DigitalTwinsState>()(
           ),
           isLoading: false,
         }));
+
+        // Keep the table/graph in step — they read from query results.
+        useQueryStore.getState().pruneDeletedRelationships([relationshipId]);
       } catch (error) {
         set({
-          error:
-            error instanceof Error
-              ? error.message
-              : "Failed to delete relationship",
+          error: formatApiError(
+            error,
+            "Failed to delete relationship. It may not exist anymore."
+          ),
           isLoading: false,
         });
         throw error;

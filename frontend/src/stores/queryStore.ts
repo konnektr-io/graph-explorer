@@ -5,6 +5,7 @@ import { digitalTwinsClientFactory } from "@/services/digitalTwinsClientFactory"
 import { useConnectionStore } from "./connectionStore";
 import type { Connection } from "./connectionStore";
 import { formatTwinForDisplay } from "@/utils/dtdlHelpers";
+import { pruneDeletedFromResults } from "@/utils/resultPruning";
 import {
   DEFAULT_ADT_SAMPLE_QUERY,
   DEFAULT_CYPHER_SAMPLE_QUERY,
@@ -72,6 +73,13 @@ export interface QueryState {
   setCurrentQuery: (query: string) => void;
   setDefaultQueryForConnection: (connection?: Connection | null) => void;
   clearQueryResults: () => void;
+  /**
+   * Drop deleted twins from the current results so the table and graph stop
+   * showing them. No-op when no results are loaded.
+   */
+  pruneDeletedTwins: (twinIds: Iterable<string>) => void;
+  /** Drop deleted relationships from the current results. */
+  pruneDeletedRelationships: (relationshipIds: Iterable<string>) => void;
   /** Abort the in-flight query (issue #22). No-op when idle. */
   cancelQuery: () => void;
   executeQuery: (
@@ -212,6 +220,30 @@ export const useQueryStore = create<QueryState>()(
       },
 
       clearQueryResults: () => set({ queryResults: null, queryError: null }),
+
+      pruneDeletedTwins: (twinIds) => {
+        const ids = new Set(twinIds);
+        if (ids.size === 0) return;
+        set((state) => ({
+          queryResults: pruneDeletedFromResults(
+            state.queryResults,
+            ids,
+            new Set<string>()
+          ),
+        }));
+      },
+
+      pruneDeletedRelationships: (relationshipIds) => {
+        const ids = new Set(relationshipIds);
+        if (ids.size === 0) return;
+        set((state) => ({
+          queryResults: pruneDeletedFromResults(
+            state.queryResults,
+            new Set<string>(),
+            ids
+          ),
+        }));
+      },
 
       executeQuery: async (
         query,
